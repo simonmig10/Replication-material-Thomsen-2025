@@ -54,13 +54,11 @@ theme_journal <- function() {
 ```{r}
 library(readr)
 
-Endo_model <- 'model endo 10-12 agri finance TEST'
-Exo_model <- 'model exo 10-12 agri finance TEST'
+Model_code <- 'Model code'
 
 
-S_model.txt=readChar(Endo_model, file.info(Endo_model)$size)
+S_model.txt=readChar(Model_code, file.info(Model_code)$size)
 
-#S_model.txt=readChar(Exo_model, file.info(Exo_model)$size)
 
 ```
 
@@ -79,20 +77,19 @@ We create a list to store the variables within
 
 
 library(readxl)
-Model_data_1995 <- read_excel("Model_data_1995.xlsx")
-Model_data_1996 <- read_excel("Model_data_1996.xlsx")
-Trade_variables <- read_excel("Raw data/Sector data/Trade variables.xlsx")
-Model_data_collected_IO <- read_excel("Model_data_collected_IO_117.xlsx")
-Emission_coeff_data <- read_excel("Emission_coeff_data.xlsx")
-Model_data_industry_sector_shares <- read_excel("Model_data_industry_sector_shares.xlsx")
-Model_data_invest <- read_excel("Model_data_invest_IO.xlsx")
-Model_data_RER_1995 <- read_excel("Model_data_RER_1995.xlsx")
-Model_data_RER_1996 <- read_excel("Model_data_RER_1996.xlsx")
-Model_baci_data <- read_excel("Model_baci_data.xlsx")
-#Model_data_leak <- read_excel("Model_data_leak.xlsx")
-Model_data_cons <- read_excel("Model_data_cons.xlsx")
-Model_data_agri_fin_1995 <- read_excel("Model_data_agri_fin_1995.xlsx")
-Model_data_agri_fin_1996 <- read_excel("Model_data_agri_fin_1996.xlsx")
+Model_data_1995 <- read_excel("Model data/Model_data_1995.xlsx")
+Model_data_1996 <- read_excel("Model data/Model_data_1996.xlsx")
+Trade_variables <- read_excel("Model data/Trade variables.xlsx")
+Model_data_collected_IO <- read_excel("Model data/Model_data_collected_IO_117.xlsx")
+Emission_coeff_data <- read_excel("Model data/Emission_coeff_data.xlsx")
+Model_data_industry_sector_shares <- read_excel("Model data/Model_data_industry_sector_shares.xlsx")
+Model_data_invest <- read_excel("Model data/Model_data_invest_IO.xlsx")
+Model_data_RER_1995 <- read_excel("Model data/Model_data_RER_1995.xlsx")
+Model_data_RER_1996 <- read_excel("Model data/Model_data_RER_1996.xlsx")
+Model_baci_data <- read_excel("Model data/Model_baci_data.xlsx")
+Model_data_cons <- read_excel("Model data/Model_data_cons.xlsx")
+Model_data_agri_fin_1995 <- read_excel("Model data/Model_data_agri_fin_1995.xlsx")
+Model_data_agri_fin_1996 <- read_excel("Model data/Model_data_agri_fin_1996.xlsx")
 
 
 
@@ -105,7 +102,6 @@ Model_data_RER_1995=lapply(Model_data_RER_1995, function(t) TIMESERIES(t, START=
 Model_data_RER_1996=lapply(Model_data_RER_1996, function(t) TIMESERIES(t, START=c(1996, 1),FREQ =1))
 Model_baci_data=lapply(Model_baci_data, function(t) TIMESERIES(t, START=c(1995, 1),FREQ =1))
 Model_data_invest=lapply(Model_data_invest, function(t) TIMESERIES(t, START=c(1995, 1),FREQ =1))
-#Model_data_leak=lapply(Model_data_leak, function(t) TIMESERIES(t, START=c(1995, 1),FREQ =1))
 Model_data_cons=lapply(Model_data_cons, function(t) TIMESERIES(t, START=c(1995, 1),FREQ =1))
 Model_data_industry_sector_shares=lapply(Model_data_industry_sector_shares, function(t) TIMESERIES(t, START=c(1995, 1),FREQ =1))
 Model_data_agri_fin_1995=lapply(Model_data_agri_fin_1995, function(t) TIMESERIES(t, START=c(1995, 1),FREQ =1))
@@ -509,8 +505,8 @@ S_modelData$invk_rest_ratio = S_modelData$invk_p_rest/TSLAG(S_modelData$kk_c_res
 # Forecasting model
 
 ```{r}
-Model_data_forecast_1995 <- read_excel("Model_data_forecast_1995.xlsx")
-Model_data_forecast_1996 <- read_excel("Model_data_forecast_1996.xlsx")
+Model_data_forecast_1995 <- read_excel("Model data/Model_data_forecast_1995.xlsx")
+Model_data_forecast_1996 <- read_excel("Model data/Model_data_forecast_1996.xlsx")
 
 Model_data_forecast_1995=lapply(Model_data_forecast_1995, function(t) TIMESERIES(t, START=c(1995, 1),FREQ =1))
 Model_data_forecast_1996=lapply(Model_data_forecast_1996, function(t) TIMESERIES(t, START=c(1996, 1),FREQ =1))
@@ -535,12 +531,6 @@ for (name in series_names) {
 }
 
 ```
-
-
-```{r}
-S_modelData_F$S_11_share_1 = TSEXTEND(S_modelData$S_11_share_1,  UPTO=c(2050,1), EXTMODE = "CONSTANT")
-```
-
 
 
 
@@ -665,7 +655,6 @@ Exo_model$simulation$check_ctr
 Exo_model$simulation$check_invest
 Exo_model$simulation$check_tax
 
-Exo_model$simulation$fnw_nfc - S_modelData_F$fnw_nfc
 ```
 
 
@@ -758,163 +747,6 @@ mtext("Aggregate variables", side = 3, outer = TRUE, line = 1, cex = 1.5)
 
 
 
-
-```{r, fig.width=20, fig.height=10}
-
-par(mfrow = c(2, 3), oma = c(0, 0, 3, 0))  # oma sets the outer margins
-
-theme_journal()
-
-plot(TSDELTALOG(Exo_model$simulation$pconk), col= "red", ylab= "B. DKR" , main= "Domestic consumption", lwd=3, xlab="", cex.main=1.8); lines(TSDELTALOG(S_modelData$pcon_2010_pout), col = "blue", lwd=3, xlab=""); 
-legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
-
-
-plot(TSDELTALOG(Exo_model$simulation$yk), col= "red", ylab= "B. DKR" , main= "Real GDP" , lwd=3, xlab="", cex.main=1.8); lines(TSDELTALOG(S_modelData$yk), col = "blue", lwd=3, xlab=""); 
-legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid() 
-
-
-plot(TSDELTALOG(Exo_model$simulation$ik), col= "red", ylab= "B. DKR" , main= "Real Investments" , lwd=3, xlab="", cex.main=1.8); lines(TSDELTALOG(S_modelData$inv_2010_pout), col = "blue", lwd=3, xlab=""); 
-legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
-
-
-plot(TSDELTALOG(Exo_model$simulation$xk), col= "red", ylab= "B. DKR" , main= "Real export" , lwd=3, xlab="", cex.main=1.8); lines(TSDELTALOG(S_modelData$ex_2010_pout), col = "blue", lwd=3, xlab=""); 
-legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
-
-
-plot(TSDELTALOG(Exo_model$simulation$imk), col= "red", ylab= "B. DKR" , main= "Real imports" , lwd=3, xlab="", cex.main=1.8); lines(TSDELTALOG(S_modelData$imk), col = "blue", lwd=3, xlab=""); 
-legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
-
-plot(TSDELTALOG(Exo_model$simulation$emp_tot), col= "red", ylab= "1000 people" , main= "employment" , lwd=3, xlab="", cex.main=1.8); 
-lines(TSDELTALOG(S_modelData$emp_tot), col = "blue", lwd=3, xlab=""); 
-legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); 
-grid()
-
-
-# Adding a collective title for both plots
-mtext("Aggregate variables", side = 3, outer = TRUE, line = 1, cex = 1.5)
-
-```
-
-
-```{r, fig.width=20, fig.height=10}
-
-par(mfrow = c(2, 3), oma = c(0, 0, 3, 0))  # oma sets the outer margins
-
-theme_journal()
-
-plot(Exo_model$simulation$pcon, col= "red", ylab= "B. DKR" , main= "Domestic consumption", lwd=3, xlab="", cex.main=1.8); lines(S_modelData$pcon, col = "blue", lwd=3, xlab=""); 
-legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
-
-
-plot(Exo_model$simulation$y, col= "red", ylab= "B. DKR" , main= "GDP" , lwd=3, xlab="", cex.main=1.8); lines(S_modelData$y, col = "blue", lwd=3, xlab=""); 
-legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid() 
-
-
-plot(Exo_model$simulation$i, col= "red", ylab= "B. DKR" , main= "Investments" , lwd=3, xlab="", cex.main=1.8); lines(S_modelData$i, col = "blue", lwd=3, xlab=""); 
-legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
-
-
-plot(Exo_model$simulation$x, col= "red", ylab= "B. DKR" , main= "Export" , lwd=3, xlab="", cex.main=1.8); lines(S_modelData$x, col = "blue", lwd=3, xlab=""); 
-legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
-
-
-plot(Exo_model$simulation$im, col= "red", ylab= "B. DKR" , main= "Imports" , lwd=3, xlab="", cex.main=1.8); lines(S_modelData$im, col = "blue", lwd=3, xlab=""); 
-legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
-
-plot(Exo_model$simulation$emp_tot, col= "red", ylab= "1000 people" , main= "Employment" , lwd=3, xlab="", cex.main=1.8); 
-lines(S_modelData$emp_tot, col = "blue", lwd=3, xlab=""); 
-legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); 
-grid()
-
-
-# Adding a collective title for both plots
-mtext("Nominal aggregate variables", side = 3, outer = TRUE, line = 1, cex = 1.5)
-
-```
-
-
-
-
-```{r, fig.width=20, fig.height=15}
-
-par(mfrow = c(3, 3), oma = c(0, 0, 3, 0))  # oma sets the outer margins
-
-theme_journal()
-
-plot(Exo_model$simulation$pout_1, col= "red", ylab= "B. DKR" , main= "Agriculture/Forresty/Fishery", lwd=3, xlab=""  , cex.main=2); lines(S_modelData$pout_1, col = "blue", lwd=3, xlab="",cex = 1.5); 
-legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
-
-plot(Exo_model$simulation$pout_2, col= "red", ylab= "B. DKR" , main= "Meat and Fish production", lwd=3, xlab="" , cex.main=2); lines(S_modelData$pout_2, col = "blue", lwd=3, xlab="",cex = 1.5); 
-legend("bottomleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
-
-plot(Exo_model$simulation$pout_3, col= "red", ylab= "B. DKR" , main= "Dairy production", lwd=3, xlab="" , cex.main=2); lines(S_modelData$pout_3, col = "blue", lwd=3, xlab="",cex = 1.5); 
-legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
-
-plot(Exo_model$simulation$pout_4, col= "red", ylab= "B. DKR" , main= "Bread production", lwd=3, xlab="" , cex.main=2); lines(S_modelData$pout_4, col = "blue", lwd=3, xlab="",cex = 1.5); 
-legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
-
-plot(Exo_model$simulation$pout_5, col= "red", ylab= "B. DKR" , main= "Other food production", lwd=3, xlab="" , cex.main=2); lines(S_modelData$pout_5, col = "blue", lwd=3, xlab="",cex = 1.5); 
-legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
-
-plot(Exo_model$simulation$pout_6, col= "red", ylab= "B. DKR" , main= "Other manufacturing", lwd=3, xlab="" , cex.main=2); lines(S_modelData$pout_6, col = "blue", lwd=3, xlab=""); 
-legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
-
-plot(Exo_model$simulation$pout_7, col= "red", ylab= "B. DKR" , main= "Energy production", lwd=3, xlab="" , cex.main=2); lines(S_modelData$pout_7, col = "blue", lwd=3, xlab="",cex = 1.5); 
-legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
-
-plot(Exo_model$simulation$pout_8, col= "red", ylab= "B. DKR" , main= "Financial corporations", lwd=3, xlab="" , cex.main=2); lines(S_modelData$pout_8, col = "blue", lwd=3, xlab="",cex = 1.5); 
-legend("bottomleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
-
-plot(Exo_model$simulation$pout_9, col= "red", ylab= "B. DKR" , main= "Other industries", lwd=3, xlab="" , cex.main=2); lines(S_modelData$pout_9, col = "blue", lwd=3, xlab="",cex = 1.5); 
-legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
-
-# Adding a collective title for both plots
-mtext("Real sales in the nine industries", side = 3, outer = TRUE, line = 1, cex = 1.5)
-
-```
-
-
-```{r, fig.width=20, fig.height=15}
-
-par(mfrow = c(3, 3), oma = c(0, 0, 3, 0))  # oma sets the outer margins
-
-theme_journal()
-
-plot(Exo_model$simulation$market_share_1, col= "red", ylab= "B. DKR" , main= "Agriculture/Forresty/Fishery", lwd=3, xlab=""  , cex.main=2); lines(S_modelData$market_share_1, col = "blue", lwd=3, xlab="",cex = 1.5); 
-legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
-
-plot(Exo_model$simulation$market_share_2, col= "red", ylab= "B. DKR" , main= "Meat and Fish production", lwd=3, xlab="" , cex.main=2); lines(S_modelData$market_share_2, col = "blue", lwd=3, xlab="",cex = 1.5); 
-legend("bottomleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
-
-plot(Exo_model$simulation$market_share_3, col= "red", ylab= "B. DKR" , main= "Dairy production", lwd=3, xlab="" , cex.main=2); lines(S_modelData$market_share_3, col = "blue", lwd=3, xlab="",cex = 1.5); 
-legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
-
-plot(Exo_model$simulation$market_share_4, col= "red", ylab= "B. DKR" , main= "Bread production", lwd=3, xlab="" , cex.main=2); lines(S_modelData$market_share_4, col = "blue", lwd=3, xlab="",cex = 1.5); 
-legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
-
-plot(Exo_model$simulation$market_share_5, col= "red", ylab= "B. DKR" , main= "Other food production", lwd=3, xlab="" , cex.main=2); lines(S_modelData$market_share_5, col = "blue", lwd=3, xlab="",cex = 1.5); 
-legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
-
-plot(Exo_model$simulation$market_share_6, col= "red", ylab= "B. DKR" , main= "Other manufacturing", lwd=3, xlab="" , cex.main=2); lines(S_modelData$market_share_6, col = "blue", lwd=3, xlab=""); 
-legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
-
-plot(Exo_model$simulation$market_share_7, col= "red", ylab= "B. DKR" , main= "Energy production", lwd=3, xlab="" , cex.main=2); lines(S_modelData$market_share_7, col = "blue", lwd=3, xlab="",cex = 1.5); 
-legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
-
-plot(Exo_model$simulation$market_share_8, col= "red", ylab= "B. DKR" , main= "Financial corporations", lwd=3, xlab="" , cex.main=2); lines(S_modelData$market_share_8, col = "blue", lwd=3, xlab="",cex = 1.5); 
-legend("bottomleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
-
-plot(Exo_model$simulation$market_share_9, col= "red", ylab= "B. DKR" , main= "Other industries", lwd=3, xlab="" , cex.main=2); lines(S_modelData$market_share_9, col = "blue", lwd=3, xlab="",cex = 1.5); 
-legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
-
-# Adding a collective title for both plots
-mtext("Real sales in the nine industries", side = 3, outer = TRUE, line = 1, cex = 1.5)
-
-```
-
-
-
-
 ```{r, fig.width=20, fig.height=15}
 
 par(mfrow = c(3, 3), oma = c(0, 0, 3, 0))  # oma sets the outer margins
@@ -958,31 +790,6 @@ mtext("CO2E emissions in the nine industries", side = 3, outer = TRUE, line = 1,
 
 
 ## Financial agriculture
-
-
-
-
-```{r, fig.width=15, fig.height=10}
-
-par(mfrow = c(2, 2), oma = c(0, 0, 3, 0))  # oma sets the outer margins
-
-theme_journal()
-
-plot(Exo_model$simulation$fnw_nfc, col= "red", ylab= "B. DKR" , main= "Agriculture/Forresty/Fishery", lwd=3, xlab=""  , cex.main=2); lines(S_modelData$fnw_nfc, col = "blue", lwd=3, xlab="",cex = 1.5); 
-legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
-
-
-plot(Exo_model$simulation$nint_agri, col= "red", ylab= "B. DKR" , main= "Agriculture/Forresty/Fishery", lwd=3, xlab=""  , cex.main=2); lines(S_modelData$nint_agri, col = "blue", lwd=3, xlab="",cex = 1.5); 
-legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
-
-plot(Exo_model$simulation$y_agri, col= "red", ylab= "B. DKR" , main= "Agriculture/Forresty/Fishery", lwd=3, xlab=""  , cex.main=2); lines(S_modelData$y_agri, col = "blue", lwd=3, xlab="",cex = 1.5); 
-legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
-
-
-plot(Exo_model$simulation$s_agri, col= "red", ylab= "B. DKR" , main= "Agriculture/Forresty/Fishery", lwd=3, xlab=""  , cex.main=2); lines(S_modelData$s_agri, col = "blue", lwd=3, xlab="",cex = 1.5); 
-legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
-
-```
 
 
 
