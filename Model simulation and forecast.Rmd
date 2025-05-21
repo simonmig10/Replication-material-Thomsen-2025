@@ -1,0 +1,2549 @@
+---
+title: "Exo model 7 industries DEFLATED IO"
+author: "Simon"
+date: "2023-09-26"
+output: html_document
+---
+```{r}
+rm(list = ls())
+```
+
+
+# Packages
+
+```{r}
+library(bimets)
+library(tidyverse)
+library(tstools)
+```
+
+
+# Set theme for plots
+
+```{r}
+# Set a theme
+theme_journal <- function() {
+  par(
+    bg = "white",            # Background color
+    col.lab = "black",       # Axis labels color
+    col.main = "black",      # Main title color
+    col.axis = "black",      # Axis text color
+    font.main = 2,           # Main title font (2 = bold)
+    font.lab = 1,            # Axis labels font
+    font.axis = 1,           # Axis text font (1 = plain)
+    mar = c(5, 5, 4, 2) + 0.1, # Margins (bottom, left, top, right)
+    tck = -0.015,            # Tick mark length
+    las = 1,                 # Axis labels orientation (1 = horizontal)
+    mgp = c(3, 1, 0),        # Axis title and labels distance
+    cex.main = 1.2,          # Main title size
+    cex.lab = 1.1,           # Axis labels size
+    cex.axis = 1,            # Axis text size
+    lwd = 2                  # Line width
+  )
+}
+
+
+```
+
+
+# Load in txt file
+
+
+
+
+```{r}
+library(readr)
+
+Endo_model <- 'model endo 10-12 agri finance TEST'
+Exo_model <- 'model exo 10-12 agri finance TEST'
+
+
+S_model.txt=readChar(Endo_model, file.info(Endo_model)$size)
+
+#S_model.txt=readChar(Exo_model, file.info(Exo_model)$size)
+
+```
+
+# Check text!
+
+```{r}
+S_model=LOAD_MODEL(modelText = S_model.txt)
+```
+
+
+# Data
+
+We create a list to store the variables within
+
+```{r}
+
+
+library(readxl)
+Model_data_1995 <- read_excel("Model_data_1995.xlsx")
+Model_data_1996 <- read_excel("Model_data_1996.xlsx")
+Trade_variables <- read_excel("Raw data/Sector data/Trade variables.xlsx")
+Model_data_collected_IO <- read_excel("Model_data_collected_IO_117.xlsx")
+Emission_coeff_data <- read_excel("Emission_coeff_data.xlsx")
+Model_data_industry_sector_shares <- read_excel("Model_data_industry_sector_shares.xlsx")
+Model_data_invest <- read_excel("Model_data_invest_IO.xlsx")
+Model_data_RER_1995 <- read_excel("Model_data_RER_1995.xlsx")
+Model_data_RER_1996 <- read_excel("Model_data_RER_1996.xlsx")
+Model_baci_data <- read_excel("Model_baci_data.xlsx")
+#Model_data_leak <- read_excel("Model_data_leak.xlsx")
+Model_data_cons <- read_excel("Model_data_cons.xlsx")
+Model_data_agri_fin_1995 <- read_excel("Model_data_agri_fin_1995.xlsx")
+Model_data_agri_fin_1996 <- read_excel("Model_data_agri_fin_1996.xlsx")
+
+
+
+Model_data_1995=lapply(Model_data_1995, function(t) TIMESERIES(t, START=c(1995, 1),FREQ =1))
+Model_data_1996=lapply(Model_data_1996, function(t) TIMESERIES(t, START=c(1996, 1),FREQ =1))
+Trade_variables=lapply(Trade_variables, function(t) TIMESERIES(t, START=c(1995, 1),FREQ =1))
+Model_data_collected_IO=lapply(Model_data_collected_IO, function(t) TIMESERIES(t, START=c(1995, 1),FREQ =1))
+Emission_coeff_data=lapply(Emission_coeff_data, function(t) TIMESERIES(t, START=c(1995, 1),FREQ =1))
+Model_data_RER_1995=lapply(Model_data_RER_1995, function(t) TIMESERIES(t, START=c(1995, 1),FREQ =1))
+Model_data_RER_1996=lapply(Model_data_RER_1996, function(t) TIMESERIES(t, START=c(1996, 1),FREQ =1))
+Model_baci_data=lapply(Model_baci_data, function(t) TIMESERIES(t, START=c(1995, 1),FREQ =1))
+Model_data_invest=lapply(Model_data_invest, function(t) TIMESERIES(t, START=c(1995, 1),FREQ =1))
+#Model_data_leak=lapply(Model_data_leak, function(t) TIMESERIES(t, START=c(1995, 1),FREQ =1))
+Model_data_cons=lapply(Model_data_cons, function(t) TIMESERIES(t, START=c(1995, 1),FREQ =1))
+Model_data_industry_sector_shares=lapply(Model_data_industry_sector_shares, function(t) TIMESERIES(t, START=c(1995, 1),FREQ =1))
+Model_data_agri_fin_1995=lapply(Model_data_agri_fin_1995, function(t) TIMESERIES(t, START=c(1995, 1),FREQ =1))
+Model_data_agri_fin_1996=lapply(Model_data_agri_fin_1996, function(t) TIMESERIES(t, START=c(1996, 1),FREQ =1))
+
+
+S_modelData=c(Model_data_1995, Model_data_1996,Model_data_collected_IO,Trade_variables,Emission_coeff_data,Model_data_RER_1995,Model_data_RER_1996,Model_baci_data,Model_data_invest,Model_data_cons,Model_data_industry_sector_shares,Model_data_agri_fin_1995,Model_data_agri_fin_1996)
+
+```
+
+
+## Shock variables:
+
+
+
+```{r}
+
+S_modelData$ws_adj= TIMESERIES(rep(0,100), START = c(1995,1), FREQ = 1)
+
+
+######### Scenario 1
+S_modelData$Scenario_1= TIMESERIES(rep(0,100), START = c(1995,1), FREQ = 1)
+
+S_modelData$tot_env_tax_exc_rent_1_base= S_modelData$tot_env_tax_exc_rent_1
+S_modelData$tot_env_tax_exc_rent_1_S1= S_modelData$tot_env_tax_exc_rent_1
+S_modelData$tot_env_tax_exc_rent_1_S2= S_modelData$tot_env_tax_exc_rent_1
+S_modelData$tot_env_tax_exc_rent_1_S3= S_modelData$tot_env_tax_exc_rent_1
+S_modelData$tot_env_tax_exc_rent_1_S4= S_modelData$tot_env_tax_exc_rent_1
+S_modelData$tot_env_tax_exc_rent_1_S5= S_modelData$tot_env_tax_exc_rent_1
+
+######### Scenario 2
+S_modelData$Scenario_2= TIMESERIES(rep(0,100), START = c(1995,1), FREQ = 1)
+
+
+S_modelData$CH4_coeff_u_energy_1_change = TIMESERIES(rep(1,100), START = c(1995,1), FREQ = 1)
+S_modelData$Co2_coeff_u_energy_1_change = TIMESERIES(rep(1,100), START = c(1995,1), FREQ = 1)
+
+######### Shock 3 to push rate
+
+S_modelData$Scenario_3= TIMESERIES(rep(0,100), START = c(1995,1), FREQ = 1)
+
+
+
+S_modelData$dep_rate_1 = S_modelData$dep_1/TSLAG(S_modelData$k_c_1,1)
+S_modelData$dep_rate_2_3_4_5 = S_modelData$dep_2_3_4_5/TSLAG(S_modelData$k_c_2_3_4_5,1)
+S_modelData$dep_rate_6 = S_modelData$dep_6/TSLAG(S_modelData$k_c_6,1)
+S_modelData$dep_rate_7 = S_modelData$dep_7/TSLAG(S_modelData$k_c_7,1)
+S_modelData$dep_rate_8 = S_modelData$dep_8/TSLAG(S_modelData$k_c_8,1)
+S_modelData$dep_rate_9 = S_modelData$dep_9/TSLAG(S_modelData$k_c_9,1)
+
+
+
+
+S_modelData$push_rate= TIMESERIES(rep(0.5,100), START = c(1995,1), FREQ = 1)
+
+######### 
+S_modelData$Scenario_4= TIMESERIES(rep(0,100), START = c(1995,1), FREQ = 1)
+S_modelData$Scenario_5= TIMESERIES(rep(0,100), START = c(1995,1), FREQ = 1)
+
+
+
+S_modelData$check_loa= TIMESERIES(rep(0,100), START = c(1995,1), FREQ = 1)
+S_modelData$check_depo= TIMESERIES(rep(0,100), START = c(1995,1), FREQ = 1)
+
+
+S_modelData$i_tax_h_adj_S1= TIMESERIES(rep(-0.001,100), START = c(1995,1), FREQ = 1)
+S_modelData$i_tax_h_adj_S2= TIMESERIES(rep(0.02,100), START = c(1995,1), FREQ = 1)
+S_modelData$i_tax_h_adj_S3= TIMESERIES(rep(0.02,100), START = c(1995,1), FREQ = 1)
+S_modelData$i_tax_h_adj_S4= TIMESERIES(rep(0.02,100), START = c(1995,1), FREQ = 1)
+S_modelData$i_tax_h_adj_S5= TIMESERIES(rep(0.02,100), START = c(1995,1), FREQ = 1)
+
+
+############## Shock to interest rates on loans ##################
+
+S_modelData$Scenario_10= TIMESERIES(rep(0,100), START = c(1995,1), FREQ = 1)
+S_modelData$Sens_1= TIMESERIES(rep(0,100), START = c(1995,1), FREQ = 1)
+
+
+####### Sensitivity analysis
+
+S_modelData$Sens_1= TIMESERIES(rep(0,100), START = c(1995,1), FREQ = 1)
+S_modelData$Sens_2= TIMESERIES(rep(0,100), START = c(1995,1), FREQ = 1)
+S_modelData$Sens_3= TIMESERIES(rep(0,100), START = c(1995,1), FREQ = 1)
+S_modelData$Sens_4= TIMESERIES(rep(0,100), START = c(1995,1), FREQ = 1)
+
+
+
+S_modelData$Gov_sens= TIMESERIES(rep(0,100), START = c(1995,1), FREQ = 1)
+S_modelData$sben_r_h_BS= S_modelData$sben_r_h
+S_modelData$sben_r_h_Gov_sens= S_modelData$sben_r_h
+
+
+
+```
+
+
+
+## Dummy variables
+
+```{r}
+
+S_modelData$d_1999=create_dummy_ts(start_basic = c(1995), end_basic=c(2100),
+ dummy_start=c(1999), dummy_end = c(1999),
+ basic_value = 0, dummy_value = 1, frequency = 1)
+
+S_modelData$d_2001=create_dummy_ts(start_basic = c(1995), end_basic=c(2100),
+ dummy_start=c(2001), dummy_end = c(2001),
+ basic_value = 0, dummy_value = 1, frequency = 1)
+
+S_modelData$d_2008=create_dummy_ts(start_basic = c(1995), end_basic=c(2100),
+ dummy_start=c(2008), dummy_end = c(2008),
+ basic_value = 0, dummy_value = 1, frequency = 1)
+
+S_modelData$d_2006=create_dummy_ts(start_basic = c(1995), end_basic=c(2100),
+ dummy_start=c(2006), dummy_end = c(2006),
+ basic_value = 0, dummy_value = 1, frequency = 1)
+
+S_modelData$d_2014=create_dummy_ts(start_basic = c(1995), end_basic=c(2100),
+ dummy_start=c(2014), dummy_end = c(2014),
+ basic_value = 0, dummy_value = 1, frequency = 1)
+
+S_modelData$d_2016=create_dummy_ts(start_basic = c(1995), end_basic=c(2100),
+ dummy_start=c(2016), dummy_end = c(2016),
+ basic_value = 0, dummy_value = 1, frequency = 1)
+
+
+S_modelData$d_2020=create_dummy_ts(start_basic = c(1995), end_basic=c(2100),
+ dummy_start=c(2020), dummy_end = c(2020),
+ basic_value = 0, dummy_value = 1, frequency = 1)
+
+
+S_modelData$time= TIMESERIES(0:length(S_modelData$d_2016), START = c(1995,1), FREQ = 1)
+
+```
+
+
+
+## Variables i need!!!
+
+
+```{r}
+
+
+S_modelData$y_h = S_modelData$w_h_r + S_modelData$b2_h_r + S_modelData$nint_h + S_modelData$ndiv_h + S_modelData$re_fdi_r_h + S_modelData$noir_h - S_modelData$scon_p_h + S_modelData$sben_r_h + S_modelData$oct_h
+
+S_modelData$y_nfc = S_modelData$y + S_modelData$b2_nfc_r - S_modelData$b2_tot - (S_modelData$n_prod_tax_tot + S_modelData$opt_tot) - S_modelData$w_nfc + S_modelData$nint_nfc + S_modelData$ndiv_nfc + S_modelData$noir_nfc + (S_modelData$re_fdi_r_nfc - S_modelData$re_fdi_p_nfc)  + S_modelData$oct_nfc
+ 
+S_modelData$y_fc = S_modelData$b2_fc_r + S_modelData$nint_fc + S_modelData$ndiv_fc + S_modelData$noir_fc + (S_modelData$re_fdi_r_fc - S_modelData$re_fdi_p_fc)  + S_modelData$scon_r_fc - S_modelData$sben_p_fc + S_modelData$oct_fc
+
+
+
+S_modelData$eq_NO_agri_h_ratio= (S_modelData$neq_NO_agri_h - S_modelData$neq_h_rv)/(TSLAG(S_modelData$neq_NO_agri_h,1) +TSLAG(S_modelData$nsec_h,1) +TSLAG(S_modelData$ndepo_NO_agri_h,1) +  TSLAG(S_modelData$nloa_NO_agri_h,1) +  TSLAG(S_modelData$ninsu_h,1)+ TSLAG(S_modelData$ndir_NO_agri_h,1)+ TSLAG(S_modelData$ncred_NO_agri_h,1))
+
+
+S_modelData$i_h_NO_agri=S_modelData$i_h - S_modelData$i_p_1*S_modelData$S_14_15_share_1
+S_modelData$yd_h_NO_agri=S_modelData$yd_h - S_modelData$s_agri_h
+
+S_modelData$nloa_NO_agri_h_tr_ratio= -S_modelData$nloa_NO_agri_h_tr/S_modelData$yd_h_NO_agri
+S_modelData$nloa_NO_agri_h_ratio= -S_modelData$nloa_NO_agri_h/S_modelData$yd_h_NO_agri
+
+
+
+S_modelData$nloa_ratio_nfc=-S_modelData$nloa_nfc/S_modelData$K_nfc
+
+
+
+S_modelData$tax_rate_h = S_modelData$i_tax_h/S_modelData$y_h
+S_modelData$tax_rate_nfc = S_modelData$i_tax_nfc/S_modelData$y_nfc
+S_modelData$tax_rate_fc = S_modelData$i_tax_fc/S_modelData$y_fc
+
+
+S_modelData$nxk  = S_modelData$xk - S_modelData$imk
+
+
+S_modelData$i_nfc_NO_agri=S_modelData$i_nfc - S_modelData$i_p_1*S_modelData$S_11_share_1
+S_modelData$nloa_NO_agri_nfc_tr_ratio = -S_modelData$nloa_NO_agri_nfc_tr/S_modelData$K_nfc
+S_modelData$nloa_NO_agri_nfc_ratio= -S_modelData$nloa_NO_agri_nfc/S_modelData$K_nfc
+
+```
+
+
+```{r}
+S_modelData$Mark_up_1= (S_modelData$X_dom_1 - (S_modelData$im_1 + S_modelData$z_dom_1 + S_modelData$Prod_tax_1+ S_modelData$w_nfc_p_1))/(S_modelData$im_1 + S_modelData$z_dom_1 + S_modelData$Prod_tax_1 + S_modelData$w_nfc_p_1)
+
+S_modelData$Mark_up_2= (S_modelData$X_dom_2 - (S_modelData$im_2 + S_modelData$z_dom_2 + S_modelData$Prod_tax_2+ S_modelData$w_nfc_p_2))/(S_modelData$im_2 + S_modelData$z_dom_2 + S_modelData$Prod_tax_2 + S_modelData$w_nfc_p_2)
+
+S_modelData$Mark_up_3= (S_modelData$X_dom_3 - (S_modelData$im_3 + S_modelData$z_dom_3 + S_modelData$Prod_tax_3+ S_modelData$w_nfc_p_3))/(S_modelData$im_3 + S_modelData$z_dom_3 + S_modelData$Prod_tax_3 + S_modelData$w_nfc_p_3)
+
+S_modelData$Mark_up_4= (S_modelData$X_dom_4 - (S_modelData$im_4 + S_modelData$z_dom_4 + S_modelData$Prod_tax_4+ S_modelData$w_nfc_p_4))/(S_modelData$im_4 + S_modelData$z_dom_4 + S_modelData$Prod_tax_4 + S_modelData$w_nfc_p_4)
+
+S_modelData$Mark_up_5= (S_modelData$X_dom_5 - (S_modelData$im_5 + S_modelData$z_dom_5 + S_modelData$Prod_tax_5+ S_modelData$w_nfc_p_5))/(S_modelData$im_5 + S_modelData$z_dom_5 + S_modelData$Prod_tax_5 + S_modelData$w_nfc_p_5)
+
+S_modelData$Mark_up_6= (S_modelData$X_dom_6 - (S_modelData$im_6 + S_modelData$z_dom_6 + S_modelData$Prod_tax_6+ S_modelData$w_nfc_p_6))/(S_modelData$im_6 + S_modelData$z_dom_6 + S_modelData$Prod_tax_6 + S_modelData$w_nfc_p_6)
+
+S_modelData$Mark_up_7= (S_modelData$X_dom_7 - (S_modelData$im_7 + S_modelData$z_dom_7 + S_modelData$Prod_tax_7+ S_modelData$w_nfc_p_7))/(S_modelData$im_7 + S_modelData$z_dom_7 + S_modelData$Prod_tax_7 + S_modelData$w_nfc_p_7)
+
+S_modelData$Mark_up_8= (S_modelData$X_dom_8 - (S_modelData$im_8 + S_modelData$z_dom_8 + S_modelData$Prod_tax_8+ S_modelData$w_nfc_p_8))/(S_modelData$im_8 + S_modelData$z_dom_8 + S_modelData$Prod_tax_8 + S_modelData$w_nfc_p_8)
+
+S_modelData$Mark_up_9= (S_modelData$X_dom_9 - (S_modelData$im_9 + S_modelData$z_dom_9 + S_modelData$Prod_tax_9+ S_modelData$w_nfc_p_9))/(S_modelData$im_9 + S_modelData$z_dom_9 + S_modelData$Prod_tax_9 + S_modelData$w_nfc_p_9)
+```
+
+
+
+
+
+As we use price indexes based on the input output tables, making the assumption of one price for industry 1-9 and so on, we do not match the aggregate price indexes based on aggregate variables.
+
+We can update the current price indexes with the new ones calculated based on IO data. 
+
+```{r}
+S_modelData$ppcon=S_modelData$ppcon_io
+S_modelData$pin=S_modelData$pin_io
+S_modelData$pinvent=S_modelData$pinvent_io
+S_modelData$px=S_modelData$px_io
+S_modelData$pg=S_modelData$pg_io
+S_modelData$pim=S_modelData$pim_io
+```
+
+
+We need to calculate new deflated variables:
+
+```{r}
+
+S_modelData$pconk_io=S_modelData$pcon/S_modelData$ppcon
+S_modelData$ik_io=S_modelData$i/S_modelData$pin
+S_modelData$inventk_io=S_modelData$invent/S_modelData$pinvent
+S_modelData$xk_io=S_modelData$x/S_modelData$px
+S_modelData$gk_io=S_modelData$g/S_modelData$pg
+S_modelData$imk_io=S_modelData$im /S_modelData$pim
+
+
+S_modelData$yk_io= S_modelData$pconk_io + S_modelData$ik_io + S_modelData$inventk_io + S_modelData$xk_io + S_modelData$gk_io - S_modelData$imk_io
+S_modelData$nxk  = S_modelData$xk - S_modelData$imk
+```
+
+
+```{r}
+
+S_modelData$pconk=S_modelData$pcon/S_modelData$ppcon
+S_modelData$ik=S_modelData$i/S_modelData$pin
+S_modelData$inventk=S_modelData$invent/S_modelData$pinvent
+S_modelData$xk=S_modelData$x/S_modelData$px
+S_modelData$gk=S_modelData$g/S_modelData$pg
+S_modelData$imk=S_modelData$im /S_modelData$pim
+
+
+S_modelData$yk= S_modelData$pconk + S_modelData$ik + S_modelData$inventk + S_modelData$xk + S_modelData$gk - S_modelData$imk
+
+```
+
+
+```{r}
+S_modelData$tot_env_diff_1 = TIMESERIES(rep(0,100), START = c(1995,1), FREQ = 1)
+S_modelData$tot_env_diff_2 = TIMESERIES(rep(0,100), START = c(1995,1), FREQ = 1)
+S_modelData$tot_env_diff_3 = TIMESERIES(rep(0,100), START = c(1995,1), FREQ = 1)
+S_modelData$tot_env_diff_4 = TIMESERIES(rep(0,100), START = c(1995,1), FREQ = 1)
+S_modelData$tot_env_diff_5 = TIMESERIES(rep(0,100), START = c(1995,1), FREQ = 1)
+S_modelData$tot_env_diff_6 = TIMESERIES(rep(0,100), START = c(1995,1), FREQ = 1)
+S_modelData$tot_env_diff_7 = TIMESERIES(rep(0,100), START = c(1995,1), FREQ = 1)
+S_modelData$tot_env_diff_8 = TIMESERIES(rep(0,100), START = c(1995,1), FREQ = 1)
+S_modelData$tot_env_diff_9 = TIMESERIES(rep(0,100), START = c(1995,1), FREQ = 1)
+```
+
+
+## Consumption tax
+
+```{r}
+S_modelData$c_oth_envT=TIMESERIES(rep(0,100), START = c(1995,1), FREQ = 1)
+S_modelData$c_110_envT=TIMESERIES(rep(0,100), START = c(1995,1), FREQ = 1)
+S_modelData$c_120_envT=TIMESERIES(rep(0,100), START = c(1995,1), FREQ = 1)
+S_modelData$c_130_envT=TIMESERIES(rep(0,100), START = c(1995,1), FREQ = 1)
+S_modelData$c_140_envT=TIMESERIES(rep(0,100), START = c(1995,1), FREQ = 1)
+S_modelData$c_160_envT=TIMESERIES(rep(0,100), START = c(1995,1), FREQ = 1)
+S_modelData$c_180_envT=TIMESERIES(rep(0,100), START = c(1995,1), FREQ = 1)
+
+S_modelData$tax=TIMESERIES(rep(750,100), START = c(1995,1), FREQ = 1)
+
+S_modelData$subsidies_rate = TIMESERIES(rep(0,100), START = c(1995,1), FREQ = 1)
+
+S_modelData$c_envT= S_modelData$c_oth_envT + S_modelData$c_110_envT + S_modelData$c_120_envT + S_modelData$c_130_envT + S_modelData$c_140_envT + S_modelData$c_160_envT + S_modelData$c_180_envT
+
+S_modelData$envT_tot =  S_modelData$c_envT
+
+```
+
+
+
+We also create new deflated yd and fnw variables, where tax changes are included:
+
+```{r}
+S_modelData$yd_hk_tax=S_modelData$yd_h/S_modelData$ppcon_tax
+S_modelData$fnw_hk_tax = S_modelData$fnw_h/S_modelData$ppcon_tax
+```
+
+
+
+## Co2E tax
+
+We create a tax rate for environmental taxes paid within each industry, as a function of Co2E emissions:
+
+```{r}
+S_modelData$Co2E_tax_1=S_modelData$tot_env_tax_exc_rent_1/S_modelData$Co2E_1_debunk
+S_modelData$Co2E_tax_2=S_modelData$tot_env_tax_exc_rent_2/S_modelData$Co2E_2_debunk
+S_modelData$Co2E_tax_3=S_modelData$tot_env_tax_exc_rent_3/S_modelData$Co2E_3_debunk
+S_modelData$Co2E_tax_4=S_modelData$tot_env_tax_exc_rent_4/S_modelData$Co2E_4_debunk
+S_modelData$Co2E_tax_5=S_modelData$tot_env_tax_exc_rent_5/S_modelData$Co2E_5_debunk
+S_modelData$Co2E_tax_6=S_modelData$tot_env_tax_exc_rent_6/S_modelData$Co2E_6_debunk
+S_modelData$Co2E_tax_7=S_modelData$tot_env_tax_exc_rent_7/S_modelData$Co2E_7_debunk
+S_modelData$Co2E_tax_8=S_modelData$tot_env_tax_exc_rent_8/S_modelData$Co2E_8_debunk
+S_modelData$Co2E_tax_9=S_modelData$tot_env_tax_exc_rent_9/S_modelData$Co2E_9_debunk
+```
+
+
+```{r}
+S_modelData$Co2E_tot_cum = TIMESERIES(rep(0,100), START = c(1995,1), FREQ = 1)
+```
+
+
+
+```{r}
+S_modelData$avg_w_t = TSLAG(S_modelData$avg_w,1) * (1+TSLAG(TSDELTALOG(S_modelData$ppcon_tax),1))
+
+S_modelData$avg_prodk = S_modelData$Xk_dom_tot / S_modelData$emp_tot
+```
+
+
+
+## Agriculture financial ratios
+
+```{r}
+
+S_modelData$Debt_ratio = -S_modelData$nloa_agri/S_modelData$k_c_1
+
+S_modelData$Likvid_ratio = S_modelData$s_agri/S_modelData$X_dom_1
+
+S_modelData$int_ratio = -(S_modelData$nint_agri + S_modelData$ndiv_agri)/S_modelData$b2_1
+
+
+```
+
+
+
+## Investment behavioural eq
+
+
+
+```{r}
+S_modelData$ps_1= S_modelData$b2_1/S_modelData$yf
+
+S_modelData$ps_rest = (S_modelData$b2_2 + S_modelData$b2_3 + S_modelData$b2_4 + S_modelData$b2_5 + S_modelData$b2_6 + S_modelData$b2_7 + S_modelData$b2_8 + S_modelData$b2_9)/S_modelData$yf
+```
+
+
+```{r}
+S_modelData$pr_1= S_modelData$b2_1/S_modelData$X_dom_1
+
+S_modelData$pr_rest = (S_modelData$b2_2 + S_modelData$b2_3 + S_modelData$b2_4 + S_modelData$b2_5 + S_modelData$b2_6 + S_modelData$b2_7 + S_modelData$b2_8 + S_modelData$b2_9)/(S_modelData$X_dom_2 + S_modelData$X_dom_3 + S_modelData$X_dom_4 + S_modelData$X_dom_5 + S_modelData$X_dom_6 + S_modelData$X_dom_7 + S_modelData$X_dom_8 + S_modelData$X_dom_9)
+```
+
+
+
+```{r}
+S_modelData$pin_1 = (S_modelData$inv_p_dom_1_tot + S_modelData$inv_p_im_1_tot)/(S_modelData$invk_p_1_tot)
+
+S_modelData$pin_rest = (S_modelData$inv_p_dom_2_tot + S_modelData$inv_p_im_2_tot + S_modelData$inv_p_dom_3_tot + S_modelData$inv_p_im_3_tot + S_modelData$inv_p_dom_4_tot + S_modelData$inv_p_im_4_tot + S_modelData$inv_p_dom_5_tot + S_modelData$inv_p_im_5_tot + S_modelData$inv_p_dom_6_tot + S_modelData$inv_p_im_6_tot)/(S_modelData$invk_p_2_tot + S_modelData$invk_p_3_tot + S_modelData$invk_p_4_tot + S_modelData$invk_p_5_tot + S_modelData$invk_p_6_tot)
+```
+
+
+
+```{r}
+S_modelData$kk_c_1=S_modelData$k_c_1/S_modelData$pin_1
+
+S_modelData$kk_c_rest= (S_modelData$k_c_2_3_4_5 + S_modelData$k_c_6 + S_modelData$k_c_7 + S_modelData$k_c_8 + S_modelData$k_c_9)/S_modelData$pin_rest
+```
+
+
+```{r}
+# Real investments
+
+S_modelData$invk_p_rest=S_modelData$invk_p_2_tot + S_modelData$invk_p_3_tot + S_modelData$invk_p_4_tot + S_modelData$invk_p_5_tot + S_modelData$invk_p_6_tot
+
+# Real output 
+
+S_modelData$Xk_dom_rest= S_modelData$Xk_dom_2 + S_modelData$Xk_dom_3 + S_modelData$Xk_dom_4 + S_modelData$Xk_dom_5 + S_modelData$Xk_dom_6 + S_modelData$Xk_dom_7 + S_modelData$Xk_dom_8 + S_modelData$Xk_dom_9
+```
+
+
+
+```{r}
+S_modelData$invk_agri_ratio = S_modelData$invk_p_1_tot/TSLAG(S_modelData$kk_c_1,1)
+
+S_modelData$invk_rest_ratio = S_modelData$invk_p_rest/TSLAG(S_modelData$kk_c_rest,1)
+```
+
+
+# Combine model with data!
+
+
+
+
+# Forecasting model
+
+```{r}
+Model_data_forecast_1995 <- read_excel("Model_data_forecast_1995.xlsx")
+Model_data_forecast_1996 <- read_excel("Model_data_forecast_1996.xlsx")
+
+Model_data_forecast_1995=lapply(Model_data_forecast_1995, function(t) TIMESERIES(t, START=c(1995, 1),FREQ =1))
+Model_data_forecast_1996=lapply(Model_data_forecast_1996, function(t) TIMESERIES(t, START=c(1996, 1),FREQ =1))
+
+Model_data_forecast=c(Model_data_forecast_1995,Model_data_forecast_1996)
+```
+
+
+
+
+We can update the exogenous variables with the forecasts from "Forecast data.Rmd"
+
+```{r}
+
+series_names <- names(Model_data_forecast)
+
+S_modelData_F=S_modelData
+
+for (name in series_names) {
+  # Update or add the extended time series in S_modelData
+  S_modelData_F[[name]] <- Model_data_forecast[[name]]
+}
+
+```
+
+
+```{r}
+S_modelData_F$S_11_share_1 = TSEXTEND(S_modelData$S_11_share_1,  UPTO=c(2050,1), EXTMODE = "CONSTANT")
+```
+
+
+
+
+
+# Combine model with data!
+
+Variables used in if-else functions
+
+
+
+
+```{r}
+
+## In sample data
+#S_model=LOAD_MODEL_DATA(S_model,S_modelData)
+
+## Forecast data
+S_model=LOAD_MODEL_DATA(S_model,S_modelData_F)
+
+```
+
+
+
+
+
+## Exo list
+
+I guess i only need the variables used for behavioural equations
+
+```{r}
+# Define exogenization list to 2020
+exogenizeList <- list(
+  
+  #Adjusted variables in 1995-2020
+  ck_tot = c(1995,1,2020,1),
+  invk_agri_ratio = c(1995,1,2020,1),
+  invk_rest_ratio = c(1995,1,2020,1),
+  avg_w = c(1995,1,2020,1),
+  w_1 = c(1995,1,2020,1),
+  w_2 = c(1995,1,2020,1),
+  w_3 = c(1995,1,2020,1),
+  w_4 = c(1995,1,2020,1),
+  w_5 = c(1995,1,2020,1),
+  w_6 = c(1995,1,2020,1),
+  w_7 = c(1995,1,2020,1),
+  w_8 = c(1995,1,2020,1),
+  w_9 = c(1995,1,2020,1),
+  phi_c_oth= c(1995,1,2020,1),
+  phi_c_110= c(1995,1,2020,1),
+  phi_c_120= c(1995,1,2020,1),
+  phi_c_130= c(1995,1,2020,1),
+  phi_c_140= c(1995,1,2020,1),
+  phi_c_160= c(1995,1,2020,1),
+  phi_c_180= c(1995,1,2020,1),
+  phi_invk_p_3= c(1995,1,2020,1),
+  phi_invk_p_5= c(1995,1,2020,1),
+  phi_invk_p_6= c(1995,1,2020,1),
+  eq_NO_agri_h_ratio= c(1995,1,2020,1),
+  nloa_NO_agri_h_tr_ratio= c(1995,1,2020,1),
+  nloa_NO_agri_nfc_tr_ratio= c(1995,1,2020,1)
+  
+  
+)
+```
+
+
+# Estimate
+
+```{r}
+
+#Estimate model coefficients
+S_model=ESTIMATE(S_model
+                 ,TSRANGE=c(1996,1,2035,1)
+)
+```
+
+
+
+
+
+# Baseline Forecast - fixed interest rate
+
+
+
+```{r}
+Scenario_10_shock= S_modelData$Scenario_10 %>% window(start= c(2023,1))
+```
+
+
+
+```{r}
+# Define add-factor list (defining shock)
+constantAdjList_s10 <- list(
+
+  Scenario_10 = TIMESERIES(Scenario_10_shock+1 ,START=c(2023,1),  FREQ=1)
+)
+
+```
+
+
+```{r, results='hide'}
+# Simulate the model (following shock)
+Exo_model <- SIMULATE(S_model
+                    ,simType='FORECAST'
+                    ,TSRANGE=c(2000,1,2035,1)
+                    ,simConvergence=0.0001
+                    ,simIterLimit=200
+                    ,verbose = F
+                    #,ConstantAdjustment=constantAdjList_s10
+                    ,Exogenize = exogenizeList
+                    )
+```
+
+```{r}
+
+Exo_model$simulation$check_nl
+Exo_model$simulation$check_sec
+Exo_model$simulation$check_loa
+Exo_model$simulation$check_depo
+Exo_model$simulation$check_np
+Exo_model$simulation$check_ctr
+Exo_model$simulation$check_invest
+Exo_model$simulation$check_tax
+
+Exo_model$simulation$fnw_nfc - S_modelData_F$fnw_nfc
+```
+
+
+# Model evaluation:
+
+
+
+
+
+
+
+
+```{r, fig.width=20, fig.height=15}
+
+par(mfrow = c(3, 3), oma = c(0, 0, 3, 0))  # oma sets the outer margins
+
+theme_journal()
+
+plot(Exo_model$simulation$Xk_dom_1, col= "red", ylab= "B. DKR" , main= "Agriculture/Forresty/Fishery", lwd=3, xlab=""  , cex.main=2); lines(S_modelData$Xk_dom_1, col = "blue", lwd=3, xlab="",cex = 1.5); 
+legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+plot(Exo_model$simulation$Xk_dom_2, col= "red", ylab= "B. DKR" , main= "Meat and Fish production", lwd=3, xlab="" , cex.main=2); lines(S_modelData$Xk_dom_2, col = "blue", lwd=3, xlab="",cex = 1.5); 
+legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+plot(Exo_model$simulation$Xk_dom_3, col= "red", ylab= "B. DKR" , main= "Dairy production", lwd=3, xlab="" , cex.main=2); lines(S_modelData$Xk_dom_3, col = "blue", lwd=3, xlab="",cex = 1.5); 
+legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+plot(Exo_model$simulation$Xk_dom_4, col= "red", ylab= "B. DKR" , main= "Bread production", lwd=3, xlab="" , cex.main=2); lines(S_modelData$Xk_dom_4, col = "blue", lwd=3, xlab="",cex = 1.5); 
+legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+plot(Exo_model$simulation$Xk_dom_5, col= "red", ylab= "B. DKR" , main= "Other food production", lwd=3, xlab="" , cex.main=2); lines(S_modelData$Xk_dom_5, col = "blue", lwd=3, xlab="",cex = 1.5); 
+legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+plot(Exo_model$simulation$Xk_dom_6, col= "red", ylab= "B. DKR" , main= "Other manufacturing", lwd=3, xlab="" , cex.main=2); lines(S_modelData$Xk_dom_6, col = "blue", lwd=3, xlab=""); 
+legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+plot(Exo_model$simulation$Xk_dom_7, col= "red", ylab= "B. DKR" , main= "Energy production", lwd=3, xlab="" , cex.main=2); lines(S_modelData$Xk_dom_7, col = "blue", lwd=3, xlab="",cex = 1.5); 
+legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+plot(Exo_model$simulation$Xk_dom_8, col= "red", ylab= "B. DKR" , main= "Financial corporations", lwd=3, xlab="" , cex.main=2); lines(S_modelData$Xk_dom_8, col = "blue", lwd=3, xlab="",cex = 1.5); 
+legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+plot(Exo_model$simulation$Xk_dom_9, col= "red", ylab= "B. DKR" , main= "Other industries", lwd=3, xlab="" , cex.main=2); lines(S_modelData$Xk_dom_9, col = "blue", lwd=3, xlab="",cex = 1.5); 
+legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+# Adding a collective title for both plots
+mtext("Real sales in the nine industries", side = 3, outer = TRUE, line = 1, cex = 1.5)
+
+```
+
+
+
+
+
+```{r, fig.width=20, fig.height=10}
+
+par(mfrow = c(2, 3), oma = c(0, 0, 3, 0))  # oma sets the outer margins
+
+theme_journal()
+
+plot(Exo_model$simulation$pconk, col= "red", ylab= "B. DKR" , main= "Domestic consumption", lwd=3, xlab="", cex.main=1.8); lines(S_modelData$pconk, col = "blue", lwd=3, xlab=""); 
+legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+
+plot(Exo_model$simulation$yk, col= "red", ylab= "B. DKR" , main= "Real GDP" , lwd=3, xlab="", cex.main=1.8); lines(S_modelData$yk, col = "blue", lwd=3, xlab=""); 
+legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid() 
+
+
+plot(Exo_model$simulation$ik, col= "red", ylab= "B. DKR" , main= "Real Investments" , lwd=3, xlab="", cex.main=1.8); lines(S_modelData$inv_2010_pout, col = "blue", lwd=3, xlab=""); 
+legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+
+plot(Exo_model$simulation$xk, col= "red", ylab= "B. DKR" , main= "Real export" , lwd=3, xlab="", cex.main=1.8); lines(S_modelData$ex_2010_pout, col = "blue", lwd=3, xlab=""); 
+legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+
+plot(Exo_model$simulation$imk, col= "red", ylab= "B. DKR" , main= "Real imports" , lwd=3, xlab="", cex.main=1.8); lines(S_modelData$imk, col = "blue", lwd=3, xlab=""); 
+legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+plot(Exo_model$simulation$emp_tot, col= "red", ylab= "1000 people" , main= "employment" , lwd=3, xlab="", cex.main=1.8); 
+lines(S_modelData$emp_tot, col = "blue", lwd=3, xlab=""); 
+legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); 
+grid()
+
+
+# Adding a collective title for both plots
+mtext("Aggregate variables", side = 3, outer = TRUE, line = 1, cex = 1.5)
+
+```
+
+
+
+
+```{r, fig.width=20, fig.height=10}
+
+par(mfrow = c(2, 3), oma = c(0, 0, 3, 0))  # oma sets the outer margins
+
+theme_journal()
+
+plot(TSDELTALOG(Exo_model$simulation$pconk), col= "red", ylab= "B. DKR" , main= "Domestic consumption", lwd=3, xlab="", cex.main=1.8); lines(TSDELTALOG(S_modelData$pcon_2010_pout), col = "blue", lwd=3, xlab=""); 
+legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+
+plot(TSDELTALOG(Exo_model$simulation$yk), col= "red", ylab= "B. DKR" , main= "Real GDP" , lwd=3, xlab="", cex.main=1.8); lines(TSDELTALOG(S_modelData$yk), col = "blue", lwd=3, xlab=""); 
+legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid() 
+
+
+plot(TSDELTALOG(Exo_model$simulation$ik), col= "red", ylab= "B. DKR" , main= "Real Investments" , lwd=3, xlab="", cex.main=1.8); lines(TSDELTALOG(S_modelData$inv_2010_pout), col = "blue", lwd=3, xlab=""); 
+legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+
+plot(TSDELTALOG(Exo_model$simulation$xk), col= "red", ylab= "B. DKR" , main= "Real export" , lwd=3, xlab="", cex.main=1.8); lines(TSDELTALOG(S_modelData$ex_2010_pout), col = "blue", lwd=3, xlab=""); 
+legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+
+plot(TSDELTALOG(Exo_model$simulation$imk), col= "red", ylab= "B. DKR" , main= "Real imports" , lwd=3, xlab="", cex.main=1.8); lines(TSDELTALOG(S_modelData$imk), col = "blue", lwd=3, xlab=""); 
+legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+plot(TSDELTALOG(Exo_model$simulation$emp_tot), col= "red", ylab= "1000 people" , main= "employment" , lwd=3, xlab="", cex.main=1.8); 
+lines(TSDELTALOG(S_modelData$emp_tot), col = "blue", lwd=3, xlab=""); 
+legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); 
+grid()
+
+
+# Adding a collective title for both plots
+mtext("Aggregate variables", side = 3, outer = TRUE, line = 1, cex = 1.5)
+
+```
+
+
+```{r, fig.width=20, fig.height=10}
+
+par(mfrow = c(2, 3), oma = c(0, 0, 3, 0))  # oma sets the outer margins
+
+theme_journal()
+
+plot(Exo_model$simulation$pcon, col= "red", ylab= "B. DKR" , main= "Domestic consumption", lwd=3, xlab="", cex.main=1.8); lines(S_modelData$pcon, col = "blue", lwd=3, xlab=""); 
+legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+
+plot(Exo_model$simulation$y, col= "red", ylab= "B. DKR" , main= "GDP" , lwd=3, xlab="", cex.main=1.8); lines(S_modelData$y, col = "blue", lwd=3, xlab=""); 
+legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid() 
+
+
+plot(Exo_model$simulation$i, col= "red", ylab= "B. DKR" , main= "Investments" , lwd=3, xlab="", cex.main=1.8); lines(S_modelData$i, col = "blue", lwd=3, xlab=""); 
+legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+
+plot(Exo_model$simulation$x, col= "red", ylab= "B. DKR" , main= "Export" , lwd=3, xlab="", cex.main=1.8); lines(S_modelData$x, col = "blue", lwd=3, xlab=""); 
+legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+
+plot(Exo_model$simulation$im, col= "red", ylab= "B. DKR" , main= "Imports" , lwd=3, xlab="", cex.main=1.8); lines(S_modelData$im, col = "blue", lwd=3, xlab=""); 
+legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+plot(Exo_model$simulation$emp_tot, col= "red", ylab= "1000 people" , main= "Employment" , lwd=3, xlab="", cex.main=1.8); 
+lines(S_modelData$emp_tot, col = "blue", lwd=3, xlab=""); 
+legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); 
+grid()
+
+
+# Adding a collective title for both plots
+mtext("Nominal aggregate variables", side = 3, outer = TRUE, line = 1, cex = 1.5)
+
+```
+
+
+
+
+```{r, fig.width=20, fig.height=15}
+
+par(mfrow = c(3, 3), oma = c(0, 0, 3, 0))  # oma sets the outer margins
+
+theme_journal()
+
+plot(Exo_model$simulation$pout_1, col= "red", ylab= "B. DKR" , main= "Agriculture/Forresty/Fishery", lwd=3, xlab=""  , cex.main=2); lines(S_modelData$pout_1, col = "blue", lwd=3, xlab="",cex = 1.5); 
+legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+plot(Exo_model$simulation$pout_2, col= "red", ylab= "B. DKR" , main= "Meat and Fish production", lwd=3, xlab="" , cex.main=2); lines(S_modelData$pout_2, col = "blue", lwd=3, xlab="",cex = 1.5); 
+legend("bottomleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+plot(Exo_model$simulation$pout_3, col= "red", ylab= "B. DKR" , main= "Dairy production", lwd=3, xlab="" , cex.main=2); lines(S_modelData$pout_3, col = "blue", lwd=3, xlab="",cex = 1.5); 
+legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+plot(Exo_model$simulation$pout_4, col= "red", ylab= "B. DKR" , main= "Bread production", lwd=3, xlab="" , cex.main=2); lines(S_modelData$pout_4, col = "blue", lwd=3, xlab="",cex = 1.5); 
+legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+plot(Exo_model$simulation$pout_5, col= "red", ylab= "B. DKR" , main= "Other food production", lwd=3, xlab="" , cex.main=2); lines(S_modelData$pout_5, col = "blue", lwd=3, xlab="",cex = 1.5); 
+legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+plot(Exo_model$simulation$pout_6, col= "red", ylab= "B. DKR" , main= "Other manufacturing", lwd=3, xlab="" , cex.main=2); lines(S_modelData$pout_6, col = "blue", lwd=3, xlab=""); 
+legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+plot(Exo_model$simulation$pout_7, col= "red", ylab= "B. DKR" , main= "Energy production", lwd=3, xlab="" , cex.main=2); lines(S_modelData$pout_7, col = "blue", lwd=3, xlab="",cex = 1.5); 
+legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+plot(Exo_model$simulation$pout_8, col= "red", ylab= "B. DKR" , main= "Financial corporations", lwd=3, xlab="" , cex.main=2); lines(S_modelData$pout_8, col = "blue", lwd=3, xlab="",cex = 1.5); 
+legend("bottomleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+plot(Exo_model$simulation$pout_9, col= "red", ylab= "B. DKR" , main= "Other industries", lwd=3, xlab="" , cex.main=2); lines(S_modelData$pout_9, col = "blue", lwd=3, xlab="",cex = 1.5); 
+legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+# Adding a collective title for both plots
+mtext("Real sales in the nine industries", side = 3, outer = TRUE, line = 1, cex = 1.5)
+
+```
+
+
+```{r, fig.width=20, fig.height=15}
+
+par(mfrow = c(3, 3), oma = c(0, 0, 3, 0))  # oma sets the outer margins
+
+theme_journal()
+
+plot(Exo_model$simulation$market_share_1, col= "red", ylab= "B. DKR" , main= "Agriculture/Forresty/Fishery", lwd=3, xlab=""  , cex.main=2); lines(S_modelData$market_share_1, col = "blue", lwd=3, xlab="",cex = 1.5); 
+legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+plot(Exo_model$simulation$market_share_2, col= "red", ylab= "B. DKR" , main= "Meat and Fish production", lwd=3, xlab="" , cex.main=2); lines(S_modelData$market_share_2, col = "blue", lwd=3, xlab="",cex = 1.5); 
+legend("bottomleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+plot(Exo_model$simulation$market_share_3, col= "red", ylab= "B. DKR" , main= "Dairy production", lwd=3, xlab="" , cex.main=2); lines(S_modelData$market_share_3, col = "blue", lwd=3, xlab="",cex = 1.5); 
+legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+plot(Exo_model$simulation$market_share_4, col= "red", ylab= "B. DKR" , main= "Bread production", lwd=3, xlab="" , cex.main=2); lines(S_modelData$market_share_4, col = "blue", lwd=3, xlab="",cex = 1.5); 
+legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+plot(Exo_model$simulation$market_share_5, col= "red", ylab= "B. DKR" , main= "Other food production", lwd=3, xlab="" , cex.main=2); lines(S_modelData$market_share_5, col = "blue", lwd=3, xlab="",cex = 1.5); 
+legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+plot(Exo_model$simulation$market_share_6, col= "red", ylab= "B. DKR" , main= "Other manufacturing", lwd=3, xlab="" , cex.main=2); lines(S_modelData$market_share_6, col = "blue", lwd=3, xlab=""); 
+legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+plot(Exo_model$simulation$market_share_7, col= "red", ylab= "B. DKR" , main= "Energy production", lwd=3, xlab="" , cex.main=2); lines(S_modelData$market_share_7, col = "blue", lwd=3, xlab="",cex = 1.5); 
+legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+plot(Exo_model$simulation$market_share_8, col= "red", ylab= "B. DKR" , main= "Financial corporations", lwd=3, xlab="" , cex.main=2); lines(S_modelData$market_share_8, col = "blue", lwd=3, xlab="",cex = 1.5); 
+legend("bottomleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+plot(Exo_model$simulation$market_share_9, col= "red", ylab= "B. DKR" , main= "Other industries", lwd=3, xlab="" , cex.main=2); lines(S_modelData$market_share_9, col = "blue", lwd=3, xlab="",cex = 1.5); 
+legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+# Adding a collective title for both plots
+mtext("Real sales in the nine industries", side = 3, outer = TRUE, line = 1, cex = 1.5)
+
+```
+
+
+
+
+```{r, fig.width=20, fig.height=15}
+
+par(mfrow = c(3, 3), oma = c(0, 0, 3, 0))  # oma sets the outer margins
+
+theme_journal()
+
+plot(Exo_model$simulation$Co2E_1_debunk/1000000000, col= "red", ylab= "Million tons CO2E" , main= "Agriculture/Forresty/Fishery", lwd=3, xlab=""  , cex.main=2); lines(S_modelData$Co2E_1_debunk/1000000000, col = "blue", lwd=3, xlab="",cex = 1.5); 
+legend("bottomleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+plot(Exo_model$simulation$Co2E_2_debunk/1000000000, col= "red", ylab= "Million tons CO2E" , main= "Meat and Fish production", lwd=3, xlab="" , cex.main=2); lines(S_modelData$Co2E_2_debunk/1000000000, col = "blue", lwd=3, xlab="",cex = 1.5); 
+legend("bottomleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+plot(Exo_model$simulation$Co2E_3_debunk/1000000000, col= "red", ylab= "Million tons CO2E" , main= "Dairy production", lwd=3, xlab="" , cex.main=2); lines(S_modelData$Co2E_3_debunk/1000000000, col = "blue", lwd=3, xlab="",cex = 1.5); 
+legend("bottomleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+plot(Exo_model$simulation$Co2E_4_debunk/1000000000, col= "red", ylab= "Million tons CO2E" , main= "Bread production", lwd=3, xlab="" , cex.main=2); lines(S_modelData$Co2E_4_debunk/1000000000, col = "blue", lwd=3, xlab="",cex = 1.5); 
+legend("bottomleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+plot(Exo_model$simulation$Co2E_5_debunk/1000000000, col= "red", ylab= "Million tons CO2E" , main= "Other food production", lwd=3, xlab="" , cex.main=2); lines(S_modelData$Co2E_5_debunk/1000000000, col = "blue", lwd=3, xlab="",cex = 1.5); 
+legend("bottomleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+plot(Exo_model$simulation$Co2E_6_debunk/1000000000, col= "red", ylab= "Million tons CO2E" , main= "Other manufacturing", lwd=3, xlab="" , cex.main=2); lines(S_modelData$Co2E_6_debunk/1000000000, col = "blue", lwd=3, xlab=""); 
+legend("bottomleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+plot(Exo_model$simulation$Co2E_7_debunk/1000000000, col= "red", ylab= "Million tons CO2E" , main= "Energy production", lwd=3, xlab="" , cex.main=2); lines(S_modelData$Co2E_7_debunk/1000000000, col = "blue", lwd=3, xlab="",cex = 1.5); 
+legend("bottomleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+plot(Exo_model$simulation$Co2E_8_debunk/1000000000, col= "red", ylab= "Million tons CO2E" , main= "Financial corporations", lwd=3, xlab="" , cex.main=2); lines(S_modelData$Co2E_8_debunk/1000000000, col = "blue", lwd=3, xlab="",cex = 1.5); 
+legend("bottomleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+plot(Exo_model$simulation$Co2E_9_debunk/1000000000, col= "red", ylab= "Million tons CO2E" , main= "Other industries", lwd=3, xlab="" , cex.main=2); lines(S_modelData$Co2E_9_debunk/1000000000, col = "blue", lwd=3, xlab="",cex = 1.5); 
+legend("bottomleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+# Adding a collective title for both plots
+mtext("CO2E emissions in the nine industries", side = 3, outer = TRUE, line = 1, cex = 1.5)
+
+```
+
+
+
+
+
+## Financial agriculture
+
+
+
+
+```{r, fig.width=15, fig.height=10}
+
+par(mfrow = c(2, 2), oma = c(0, 0, 3, 0))  # oma sets the outer margins
+
+theme_journal()
+
+plot(Exo_model$simulation$fnw_nfc, col= "red", ylab= "B. DKR" , main= "Agriculture/Forresty/Fishery", lwd=3, xlab=""  , cex.main=2); lines(S_modelData$fnw_nfc, col = "blue", lwd=3, xlab="",cex = 1.5); 
+legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+
+plot(Exo_model$simulation$nint_agri, col= "red", ylab= "B. DKR" , main= "Agriculture/Forresty/Fishery", lwd=3, xlab=""  , cex.main=2); lines(S_modelData$nint_agri, col = "blue", lwd=3, xlab="",cex = 1.5); 
+legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+plot(Exo_model$simulation$y_agri, col= "red", ylab= "B. DKR" , main= "Agriculture/Forresty/Fishery", lwd=3, xlab=""  , cex.main=2); lines(S_modelData$y_agri, col = "blue", lwd=3, xlab="",cex = 1.5); 
+legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+
+plot(Exo_model$simulation$s_agri, col= "red", ylab= "B. DKR" , main= "Agriculture/Forresty/Fishery", lwd=3, xlab=""  , cex.main=2); lines(S_modelData$s_agri, col = "blue", lwd=3, xlab="",cex = 1.5); 
+legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+```
+
+
+
+```{r, fig.width=15, fig.height=10}
+par(mfrow = c(1, 2), oma = c(0, 0, 3, 0))  # oma sets the outer margins
+
+theme_journal()
+
+plot(Exo_model$simulation$Debt_ratio, col= "red", ylab= "B. DKR" , main= "Agriculture/Forresty/Fishery", lwd=3, xlab=""  , cex.main=2); lines(S_modelData$Debt_ratio, col = "blue", lwd=3, xlab="",cex = 1.5); 
+legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+plot(Exo_model$simulation$Likvid_ratio, col= "red", ylab= "B. DKR" , main= "Agriculture/Forresty/Fishery", lwd=3, xlab=""  , cex.main=2); lines(S_modelData$Likvid_ratio, col = "blue", lwd=3, xlab="",cex = 1.5); 
+legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+```
+
+
+
+# Tax 350
+
+
+
+```{r}
+
+Scenario_1_shock= S_modelData$Scenario_1 %>% window(start= c(2028,1))
+```
+
+
+
+```{r}
+# Define add-factor list (defining shock)
+constantAdjList_s1 <- list(
+  
+Scenario_1 = TIMESERIES(Scenario_1_shock+1 ,START=c(2028,1),  FREQ=1)
+)
+
+```
+
+
+```{r}
+#we want no change in government financial net wealth
+Targets<-list(
+fnw_g = TSERIES(c(as.numeric(Exo_model$simulation$fnw_g)),START=c(2000,1),FREQ=1)
+)
+```
+
+We calculate what should the tax-rate be to obtain the target
+
+```{r}
+myModel_S1<-RENORM(S_model
+                    ,INSTRUMENT = c('sben_r_h_BS')
+                    ,simType = "FORECAST"
+                    ,TARGET = Targets
+                    ,TSRANGE=c(2000,1,2035,1)
+                    ,simConvergence=0.0001
+                    ,simIterLimit=200
+                    ,verbose = F
+                    ,Exogenize = exogenizeList
+                ,ConstantAdjustment=constantAdjList_s1
+)
+
+```
+
+We compare the updated tax-rate with the old one
+```{r}
+with(myModel_S1,TABIT(S_modelData_F$sben_r_h_BS,
+renorm$INSTRUMENT$sben_r_h_BS))
+
+```
+
+We update the model with the new inputs
+
+```{r}
+Renorm_S1<-myModel_S1
+
+Renorm_S1$modelData<-myModel_S1$renorm$modelData
+
+```
+
+
+We run the model
+
+```{r, results='hide'}
+# Simulate the model (following shock)
+Exo_model_S1 <- SIMULATE(Renorm_S1
+                    ,simType='FORECAST'
+                    ,TSRANGE=c(2000,1,2035,1)
+                    ,simConvergence=0.0001
+                    ,simIterLimit=200
+                    ,ConstantAdjustment=constantAdjList_s1
+                    ,Exogenize = exogenizeList
+                    )
+```
+
+
+
+
+
+
+
+# Tax 450 
+
+
+
+```{r}
+
+Scenario_2_shock= S_modelData$Scenario_2 %>% window(start= c(2028,1))
+```
+
+
+
+```{r}
+# Define add-factor list (defining shock)
+constantAdjList_s2 <- list(
+  
+Scenario_2 = TIMESERIES(Scenario_2_shock+1 ,START=c(2028,1),  FREQ=1)
+)
+
+```
+
+
+```{r}
+myModel_S2<-RENORM(S_model
+                    ,INSTRUMENT = c('sben_r_h_BS')
+                    ,simType = "FORECAST"
+                    ,TARGET = Targets
+                    ,TSRANGE=c(2000,1,2035,1)
+                    ,simConvergence=0.0001
+                    ,simIterLimit=200
+                    ,verbose = F
+                    ,Exogenize = exogenizeList
+                ,ConstantAdjustment=constantAdjList_s2
+)
+
+```
+
+We compare the updated tax-rate with the old one
+```{r}
+with(myModel_S2,TABIT(S_modelData_F$sben_r_h_BS,
+renorm$INSTRUMENT$sben_r_h_BS))
+
+```
+
+We update the model with the new inputs
+
+```{r}
+Renorm_S2<-myModel_S2
+
+Renorm_S2$modelData<-myModel_S2$renorm$modelData
+
+```
+
+
+
+```{r, results='hide'}
+# Simulate the model (following shock)
+Exo_model_S2 <- SIMULATE(Renorm_S2
+                    ,simType='FORECAST'
+                    ,TSRANGE=c(2000,1,2035,1)
+                    ,simConvergence=0.0001
+                    ,simIterLimit=200
+                    ,ConstantAdjustment=constantAdjList_s2
+                    ,Exogenize = exogenizeList
+                    )
+```
+
+
+
+
+# Tax 550 
+
+
+
+```{r}
+
+Scenario_3_shock= S_modelData$Scenario_3 %>% window(start= c(2028,1))
+```
+
+
+
+```{r}
+# Define add-factor list (defining shock)
+constantAdjList_s3 <- list(
+  
+Scenario_3 = TIMESERIES(Scenario_3_shock+1 ,START=c(2028,1),  FREQ=1)
+)
+
+```
+
+
+
+```{r}
+myModel_S3<-RENORM(S_model
+                    ,INSTRUMENT = c('sben_r_h_BS')
+                    ,simType = "FORECAST"
+                    ,TARGET = Targets
+                    ,TSRANGE=c(2000,1,2035,1)
+                    ,simConvergence=0.0001
+                    ,simIterLimit=200
+                    ,verbose = F
+                    ,Exogenize = exogenizeList
+                ,ConstantAdjustment=constantAdjList_s3
+)
+
+```
+
+We compare the updated tax-rate with the old one
+```{r}
+with(myModel_S3,TABIT(S_modelData_F$sben_r_h_BS,
+renorm$INSTRUMENT$sben_r_h_BS))
+
+```
+
+We update the model with the new inputs
+
+```{r}
+Renorm_S3<-myModel_S3
+
+Renorm_S3$modelData<-myModel_S3$renorm$modelData
+
+```
+
+
+
+```{r, results='hide'}
+# Simulate the model (following shock)
+Exo_model_S3 <- SIMULATE(Renorm_S3
+                    ,simType='FORECAST'
+                    ,TSRANGE=c(2000,1,2035,1)
+                    ,simConvergence=0.0001
+                    ,simIterLimit=200
+                    ,ConstantAdjustment=constantAdjList_s3
+                    ,Exogenize = exogenizeList
+                    )
+```
+
+
+
+# Tax 650 
+
+
+
+```{r}
+
+Scenario_4_shock= S_modelData$Scenario_4 %>% window(start= c(2028,1))
+```
+
+
+
+```{r}
+# Define add-factor list (defining shock)
+constantAdjList_s4 <- list(
+  
+Scenario_4 = TIMESERIES(Scenario_4_shock+1 ,START=c(2028,1),  FREQ=1)
+)
+
+```
+
+
+
+```{r}
+myModel_S4<-RENORM(S_model
+                    ,INSTRUMENT = c('sben_r_h_BS')
+                    ,simType = "FORECAST"
+                    ,TARGET = Targets
+                    ,TSRANGE=c(2000,1,2035,1)
+                    ,simConvergence=0.0001
+                    ,simIterLimit=200
+                    ,verbose = F
+                    ,Exogenize = exogenizeList
+                ,ConstantAdjustment=constantAdjList_s4
+)
+
+```
+
+We compare the updated tax-rate with the old one
+```{r}
+with(myModel_S4,TABIT(S_modelData_F$sben_r_h_BS,
+renorm$INSTRUMENT$sben_r_h_BS))
+
+```
+
+We update the model with the new inputs
+
+```{r}
+Renorm_S4<-myModel_S4
+
+Renorm_S4$modelData<-myModel_S4$renorm$modelData
+
+```
+
+
+```{r, results='hide'}
+# Simulate the model (following shock)
+Exo_model_S4 <- SIMULATE(Renorm_S4
+                    ,simType='FORECAST'
+                    ,TSRANGE=c(2000,1,2035,1)
+                    ,simConvergence=0.0001
+                    ,simIterLimit=200
+                    ,ConstantAdjustment=constantAdjList_s4
+                    ,Exogenize = exogenizeList
+                    )
+```
+
+
+# Tax 750 
+
+
+
+```{r}
+
+Scenario_5_shock= S_modelData$Scenario_5 %>% window(start= c(2028,1))
+```
+
+
+
+```{r}
+# Define add-factor list (defining shock)
+constantAdjList_s5 <- list(
+  
+Scenario_5 = TIMESERIES(Scenario_5_shock+1 ,START=c(2028,1),  FREQ=1)
+)
+
+```
+
+
+
+```{r}
+myModel_S5<-RENORM(S_model
+                    ,INSTRUMENT = c('sben_r_h_BS')
+                    ,simType = "FORECAST"
+                    ,TARGET = Targets
+                    ,TSRANGE=c(2000,1,2035,1)
+                    ,simConvergence=0.0001
+                    ,simIterLimit=200
+                    ,verbose = F
+                    ,Exogenize = exogenizeList
+                ,ConstantAdjustment=constantAdjList_s5
+)
+
+```
+
+We compare the updated tax-rate with the old one
+```{r}
+with(myModel_S5,TABIT(S_modelData_F$sben_r_h_BS,
+renorm$INSTRUMENT$sben_r_h_BS))
+
+```
+
+We update the model with the new inputs
+
+```{r}
+Renorm_S5<-myModel_S5
+
+Renorm_S5$modelData<-myModel_S5$renorm$modelData
+
+```
+
+
+```{r, results='hide'}
+# Simulate the model (following shock)
+Exo_model_S5 <- SIMULATE(Renorm_S5
+                    ,simType='FORECAST'
+                    ,TSRANGE=c(2000,1,2035,1)
+                    ,simConvergence=0.0001
+                    ,simIterLimit=200
+                    ,ConstantAdjustment=constantAdjList_s5
+                    ,Exogenize = exogenizeList
+                    )
+```
+
+
+
+
+
+
+# plots
+
+First we plot a simple example:
+
+Then we can plot what the model shows
+
+```{r, fig.height=7, fig.width=10}
+# Load required library
+library(ggplot2)
+
+# Create a new dataset with nine combinations
+data <- data.frame(
+  push_through_rate = c(0.85 , 0.55, 0.41, 0.33, 0.27),
+  tax_rate = c(350, 450, 550, 650, 750)
+)
+
+# Plot the data
+ggplot(data, aes(x = tax_rate, y = push_through_rate)) +
+  geom_point(size = 5, color = "blue", alpha = 0.7) +
+  geom_text(
+    aes(label = round(push_through_rate, 2)), # Display rounded push-through rate above each point
+    vjust = -1, size = 4, color = "black"
+  ) +
+  labs(
+    x = "Tax Rate (DKK/ton CO2E)",
+    y = "Push-Through Rate",
+    title = "Tax and Push Rate Combinations for Fixed Emission Reduction",
+    subtitle = "Each point represents a unique combination of tax rate and push-through rate \nfor a CO2E emission reduction of 1 million ton CO2E in year 2030"
+  ) +
+  theme_minimal()
+
+
+```
+
+
+
+
+## Shadow price
+
+```{r}
+## Cumulative change in emissions Scenario 1
+
+
+Exo_model_S5$simulation$push_rate
+
+Delta_GHG_tot_DK_S1 =TIMESERIES((Exo_model_S1$simulation$Co2E_tot/1000 - Exo_model$simulation$Co2E_tot/1000),START = c(2000,1), FREQ = 1)
+Delta_GHG_tot_DK_S2 =TIMESERIES((Exo_model_S2$simulation$Co2E_tot/1000 - Exo_model$simulation$Co2E_tot/1000),START = c(2000,1), FREQ = 1)#
+Delta_GHG_tot_DK_S3 =TIMESERIES((Exo_model_S3$simulation$Co2E_tot/1000 - Exo_model$simulation$Co2E_tot/1000),START = c(2000,1), FREQ = 1)#
+Delta_GHG_tot_DK_S4 =TIMESERIES((Exo_model_S4$simulation$Co2E_tot/1000 - Exo_model$simulation$Co2E_tot/1000),START = c(2000,1), FREQ = 1)
+Delta_GHG_tot_DK_S5 =TIMESERIES((Exo_model_S5$simulation$Co2E_tot/1000 - Exo_model$simulation$Co2E_tot/1000),START = c(2000,1), FREQ = 1)
+
+```
+
+
+GDP components
+
+```{r, fig.width=15, fig.height=12}
+
+par(mfrow = c(2, 2), oma = c(0, 0, 3, 0))  # oma sets the outer margins
+
+theme_journal()
+
+
+plot(window((Exo_model_S1$simulation$yk - Exo_model$simulation$yk)/Exo_model$simulation$yk*100, start=c(2020,1)), ylim=c(-0.4,0.05),col= "black", ylab= "Percentage change from baseline" , main= "Real GDP", lwd=3, xlab="", cex.main=1.5);
+lines(window((Exo_model_S2$simulation$yk - Exo_model$simulation$yk)/Exo_model$simulation$yk*100, start=c(2020,1)), col = "blue", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S3$simulation$yk - Exo_model$simulation$yk)/Exo_model$simulation$yk*100, start=c(2020,1)), col = "yellow", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S4$simulation$yk - Exo_model$simulation$yk)/Exo_model$simulation$yk*100, start=c(2020,1)), col = "darkgreen", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S5$simulation$yk - Exo_model$simulation$yk)/Exo_model$simulation$yk*100, start=c(2020,1)), col = "darkorange", lwd=3,lty= 1, xlab="");legend("bottomleft",legend=c(expression("Scenario 1: Tax 350DKK & "*theta* "= 0.85"),expression("Scenario 2: Tax 450DKK & "*theta* "= 0.55"),expression("Scenario 3: Tax 550DKK & "*theta* "= 0.41"),expression("Scenario 4: Tax 650DKK & "*theta* "= 0.33"),expression("Scenario 5: Tax 750DKK & "*theta* "= 0.27")),lty=c(1),lwd=c(2),bty="n", col = c("black","blue","yellow","darkgreen","darkorange"), cex=1.1); grid()
+
+
+plot(window((Exo_model_S1$simulation$pconk - Exo_model$simulation$pconk)/Exo_model$simulation$pconk*100, start=c(2020,1)), ylim=c(-0.5,0.5),col= "black", ylab= "Percentage change from baseline" , main= "Real consumption", lwd=3, xlab="", cex.main=1.5);
+lines(window((Exo_model_S2$simulation$pconk - Exo_model$simulation$pconk)/Exo_model$simulation$pconk*100, start=c(2020,1)), col = "blue", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S3$simulation$pconk - Exo_model$simulation$pconk)/Exo_model$simulation$pconk*100, start=c(2020,1)), col = "yellow", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S4$simulation$pconk - Exo_model$simulation$pconk)/Exo_model$simulation$pconk*100, start=c(2020,1)), col = "darkgreen", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S5$simulation$pconk - Exo_model$simulation$pconk)/Exo_model$simulation$pconk*100, start=c(2020,1)), col = "darkorange", lwd=3,lty= 1, xlab="");legend("bottomleft",legend=c(expression("Scenario 1: Tax 350DKK & "*theta* "= 0.85"),expression("Scenario 2: Tax 450DKK & "*theta* "= 0.55"),expression("Scenario 3: Tax 550DKK & "*theta* "= 0.41"),expression("Scenario 4: Tax 650DKK & "*theta* "= 0.33"),expression("Scenario 5: Tax 750DKK & "*theta* "= 0.27")),lty=c(1),lwd=c(2),bty="n", col = c("black","blue","yellow","darkgreen","darkorange"), cex=1.1); grid()
+
+
+plot(window((Exo_model_S1$simulation$ik - Exo_model$simulation$ik)/Exo_model$simulation$ik*100, start=c(2020,1)), ylim=c(-0.7,0.4),col= "black", ylab= "Percentage change from baseline" , main= "Real investments", lwd=3, xlab="", cex.main=1.5);
+lines(window((Exo_model_S2$simulation$ik - Exo_model$simulation$ik)/Exo_model$simulation$ik*100, start=c(2020,1)), col = "blue", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S3$simulation$ik - Exo_model$simulation$ik)/Exo_model$simulation$ik*100, start=c(2020,1)), col = "yellow", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S4$simulation$ik - Exo_model$simulation$ik)/Exo_model$simulation$ik*100, start=c(2020,1)), col = "darkgreen", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S5$simulation$ik - Exo_model$simulation$ik)/Exo_model$simulation$ik*100, start=c(2020,1)), col = "darkorange", lwd=3,lty= 1, xlab="");legend("bottomleft",legend=c(expression("Scenario 1: Tax 350DKK & "*theta* "= 0.85"),expression("Scenario 2: Tax 450DKK & "*theta* "= 0.55"),expression("Scenario 3: Tax 550DKK & "*theta* "= 0.41"),expression("Scenario 4: Tax 650DKK & "*theta* "= 0.33"),expression("Scenario 5: Tax 750DKK & "*theta* "= 0.27")),lty=c(1),lwd=c(2),bty="n", col = c("black","blue","yellow","darkgreen","darkorange"), cex=1.1); grid()
+
+
+plot(window((Exo_model_S1$simulation$xk - Exo_model$simulation$xk)/Exo_model$simulation$xk*100, start=c(2020,1)), ylim=c(-0.7,0.01),col= "black", ylab= "Percentage change from baseline" , main= "Real exports", lwd=3, xlab="", cex.main=1.5);
+lines(window((Exo_model_S2$simulation$xk - Exo_model$simulation$xk)/Exo_model$simulation$xk*100, start=c(2020,1)), col = "blue", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S3$simulation$xk - Exo_model$simulation$xk)/Exo_model$simulation$xk*100, start=c(2020,1)), col = "yellow", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S4$simulation$xk - Exo_model$simulation$xk)/Exo_model$simulation$xk*100, start=c(2020,1)), col = "darkgreen", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S5$simulation$xk - Exo_model$simulation$xk)/Exo_model$simulation$xk*100, start=c(2020,1)), col = "darkorange", lwd=3,lty= 1, xlab="");legend("bottomleft",legend=c(expression("Scenario 1: Tax 350DKK & "*theta* "= 0.85"),expression("Scenario 2: Tax 450DKK & "*theta* "= 0.55"),expression("Scenario 3: Tax 550DKK & "*theta* "= 0.41"),expression("Scenario 4: Tax 650DKK & "*theta* "= 0.33"),expression("Scenario 5: Tax 750DKK & "*theta* "= 0.27")),lty=c(1),lwd=c(2),bty="n", col = c("black","blue","yellow","darkgreen","darkorange"), cex=1.1); grid()
+
+
+# Adding a collective title for both plots
+mtext("Carbon tax on production", side = 3, outer = TRUE, line = 1, cex = 1.5)
+
+```
+
+Investments fall because profit share falls!!!
+
+
+```{r}
+pr_BS= (Exo_model$simulation$b2_1 + Exo_model$simulation$b2_2 + Exo_model$simulation$b2_3 + Exo_model$simulation$b2_4 + Exo_model$simulation$b2_5 + Exo_model$simulation$b2_6 + Exo_model$simulation$b2_7 + Exo_model$simulation$b2_8 + Exo_model$simulation$b2_9)/(Exo_model$simulation$X_dom_1 + Exo_model$simulation$X_dom_2 + Exo_model$simulation$X_dom_3 + Exo_model$simulation$X_dom_4 + Exo_model$simulation$X_dom_5 + Exo_model$simulation$X_dom_6 + Exo_model$simulation$X_dom_7 + Exo_model$simulation$X_dom_8 + Exo_model$simulation$X_dom_9)
+
+
+pr_S1= (Exo_model_S1$simulation$b2_1 + Exo_model_S1$simulation$b2_2 + Exo_model_S1$simulation$b2_3 + Exo_model_S1$simulation$b2_4 + Exo_model_S1$simulation$b2_5 + Exo_model_S1$simulation$b2_6 + Exo_model_S1$simulation$b2_7 + Exo_model_S1$simulation$b2_8 + Exo_model_S1$simulation$b2_9)/(Exo_model_S1$simulation$X_dom_1 + Exo_model_S1$simulation$X_dom_2 + Exo_model_S1$simulation$X_dom_3 + Exo_model_S1$simulation$X_dom_4 + Exo_model_S1$simulation$X_dom_5 + Exo_model_S1$simulation$X_dom_6 + Exo_model_S1$simulation$X_dom_7 + Exo_model_S1$simulation$X_dom_8 + Exo_model_S1$simulation$X_dom_9)
+
+
+pr_S2= (Exo_model_S2$simulation$b2_1 + Exo_model_S2$simulation$b2_2 + Exo_model_S2$simulation$b2_3 + Exo_model_S2$simulation$b2_4 + Exo_model_S2$simulation$b2_5 + Exo_model_S2$simulation$b2_6 + Exo_model_S2$simulation$b2_7 + Exo_model_S2$simulation$b2_8 + Exo_model_S2$simulation$b2_9)/(Exo_model_S2$simulation$X_dom_1 + Exo_model_S2$simulation$X_dom_2 + Exo_model_S2$simulation$X_dom_3 + Exo_model_S2$simulation$X_dom_4 + Exo_model_S2$simulation$X_dom_5 + Exo_model_S2$simulation$X_dom_6 + Exo_model_S2$simulation$X_dom_7 + Exo_model_S2$simulation$X_dom_8 + Exo_model_S2$simulation$X_dom_9)
+
+
+pr_S3= (Exo_model_S3$simulation$b2_1 + Exo_model_S3$simulation$b2_2 + Exo_model_S3$simulation$b2_3 + Exo_model_S3$simulation$b2_4 + Exo_model_S3$simulation$b2_5 + Exo_model_S3$simulation$b2_6 + Exo_model_S3$simulation$b2_7 + Exo_model_S3$simulation$b2_8 + Exo_model_S3$simulation$b2_9)/(Exo_model_S3$simulation$X_dom_1 + Exo_model_S3$simulation$X_dom_2 + Exo_model_S3$simulation$X_dom_3 + Exo_model_S3$simulation$X_dom_4 + Exo_model_S3$simulation$X_dom_5 + Exo_model_S3$simulation$X_dom_6 + Exo_model_S3$simulation$X_dom_7 + Exo_model_S3$simulation$X_dom_8 + Exo_model_S3$simulation$X_dom_9)
+
+
+pr_S4= (Exo_model_S4$simulation$b2_1 + Exo_model_S4$simulation$b2_2 + Exo_model_S4$simulation$b2_3 + Exo_model_S4$simulation$b2_4 + Exo_model_S4$simulation$b2_5 + Exo_model_S4$simulation$b2_6 + Exo_model_S4$simulation$b2_7 + Exo_model_S4$simulation$b2_8 + Exo_model_S4$simulation$b2_9)/(Exo_model_S4$simulation$X_dom_1 + Exo_model_S4$simulation$X_dom_2 + Exo_model_S4$simulation$X_dom_3 + Exo_model_S4$simulation$X_dom_4 + Exo_model_S4$simulation$X_dom_5 + Exo_model_S4$simulation$X_dom_6 + Exo_model_S4$simulation$X_dom_7 + Exo_model_S4$simulation$X_dom_8 + Exo_model_S4$simulation$X_dom_9)
+
+
+pr_S5= (Exo_model_S5$simulation$b2_1 + Exo_model_S5$simulation$b2_2 + Exo_model_S5$simulation$b2_3 + Exo_model_S5$simulation$b2_4 + Exo_model_S5$simulation$b2_5 + Exo_model_S5$simulation$b2_6 + Exo_model_S5$simulation$b2_7 + Exo_model_S5$simulation$b2_8 + Exo_model_S5$simulation$b2_9)/(Exo_model_S5$simulation$X_dom_1 + Exo_model_S5$simulation$X_dom_2 + Exo_model_S5$simulation$X_dom_3 + Exo_model_S5$simulation$X_dom_4 + Exo_model_S5$simulation$X_dom_5 + Exo_model_S5$simulation$X_dom_6 + Exo_model_S5$simulation$X_dom_7 + Exo_model_S5$simulation$X_dom_8 + Exo_model_S5$simulation$X_dom_9)
+```
+
+
+
+```{r, fig.width=15, fig.height=7}
+
+
+par(mfrow = c(1, 2), oma = c(0, 0, 3, 0))  # oma sets the outer margins
+
+theme_journal()
+
+
+
+plot(window((Exo_model_S1$simulation$b2_1/Exo_model_S1$simulation$pout_1 - Exo_model$simulation$b2_1/Exo_model$simulation$pout_1)/Exo_model$simulation$b2_1/Exo_model$simulation$pout_1*100, start=c(2020,1)), ylim=c(-17,0.0001),col= "black", ylab= "Percentage change from BS" , main= "Real gross operating surplus (Agriculture)", lwd=3, xlab="", cex.main=1.5);
+lines(window((Exo_model_S2$simulation$b2_1/Exo_model_S2$simulation$pout_1 - Exo_model$simulation$b2_1/Exo_model$simulation$pout_1)/Exo_model$simulation$b2_1/Exo_model$simulation$pout_1*100, start=c(2020,1)), col = "blue", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S3$simulation$b2_1/Exo_model_S3$simulation$pout_1 - Exo_model$simulation$b2_1/Exo_model$simulation$pout_1)/Exo_model$simulation$b2_1/Exo_model$simulation$pout_1*100, start=c(2020,1)), col = "yellow", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S4$simulation$b2_1/Exo_model_S4$simulation$pout_1 - Exo_model$simulation$b2_1/Exo_model$simulation$pout_1)/Exo_model$simulation$b2_1/Exo_model$simulation$pout_1*100, start=c(2020,1)), col = "darkgreen", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S5$simulation$b2_1/Exo_model_S5$simulation$pout_1 - Exo_model$simulation$b2_1/Exo_model$simulation$pout_1)/Exo_model$simulation$b2_1/Exo_model$simulation$pout_1*100, start=c(2020,1)), col = "darkorange", lwd=3,lty= 1, xlab="");legend("bottomleft",legend=c(expression("Scenario 1: Tax 350DKK & "*theta* "= 0.85"),expression("Scenario 2: Tax 450DKK & "*theta* "= 0.55"),expression("Scenario 3: Tax 550DKK & "*theta* "= 0.41"),expression("Scenario 4: Tax 650DKK & "*theta* "= 0.33"),expression("Scenario 5: Tax 750DKK & "*theta* "= 0.27")),lty=c(1),lwd=c(2),bty="n", col = c("black","blue","yellow","darkgreen","darkorange"), cex=1.1); grid()
+
+
+
+
+plot(window((Exo_model_S1$simulation$ppcon - Exo_model$simulation$ppcon)*100, start=c(2020,1)), ylim=c(-0.05,0.1),col= "black", ylab= "Percentage point change from BS" , main= "Consumer prices", lwd=3, xlab="", cex.main=1.5);
+lines(window((Exo_model_S2$simulation$ppcon - Exo_model$simulation$ppcon)*100, start=c(2020,1)), col = "blue", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S3$simulation$ppcon - Exo_model$simulation$ppcon)*100, start=c(2020,1)), col = "yellow", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S4$simulation$ppcon - Exo_model$simulation$ppcon)*100, start=c(2020,1)), col = "darkgreen", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S5$simulation$ppcon - Exo_model$simulation$ppcon)*100, start=c(2020,1)), col = "darkorange", lwd=3,lty= 1, xlab="");legend("bottomleft",legend=c(expression("Scenario 1: Tax 350DKK & "*theta* "= 0.85"),expression("Scenario 2: Tax 450DKK & "*theta* "= 0.55"),expression("Scenario 3: Tax 550DKK & "*theta* "= 0.41"),expression("Scenario 4: Tax 650DKK & "*theta* "= 0.33"),expression("Scenario 5: Tax 750DKK & "*theta* "= 0.27")),lty=c(1),lwd=c(2),bty="n", col = c("black","blue","yellow","darkgreen","darkorange"), cex=1.1); grid()
+
+
+
+
+
+```
+
+
+```{r, fig.width=20, fig.height=12}
+
+
+par(mfrow = c(2, 3), oma = c(0, 0, 3, 0))  # oma sets the outer margins
+
+theme_journal()
+
+
+
+
+plot(window((Exo_model_S1$simulation$fnw_g - Exo_model$simulation$fnw_g)/Exo_model$simulation$y, start=c(2020,1))*100, ylim=c(-0.7,0.7),col= "black", ylab= "Change from baseline (relative to GDP)" , main= "Government", lwd=3, xlab="", cex.main=1.5);
+lines(window((Exo_model_S2$simulation$fnw_g - Exo_model$simulation$fnw_g)/Exo_model$simulation$y, start=c(2020,1))*100, col = "blue", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S3$simulation$fnw_g - Exo_model$simulation$fnw_g)/Exo_model$simulation$y, start=c(2020,1))*100, col = "yellow", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S4$simulation$fnw_g - Exo_model$simulation$fnw_g)/Exo_model$simulation$y, start=c(2020,1))*100, col = "darkgreen", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S5$simulation$fnw_g - Exo_model$simulation$fnw_g)/Exo_model$simulation$y, start=c(2020,1))*100, col = "darkorange", lwd=3,lty= 1, xlab="");legend("bottomleft",legend=c(expression("Scenario 1: Tax 350DKK & "*theta* "= 0.85"),expression("Scenario 2: Tax 450DKK & "*theta* "= 0.55"),expression("Scenario 3: Tax 550DKK & "*theta* "= 0.41"),expression("Scenario 4: Tax 650DKK & "*theta* "= 0.33"),expression("Scenario 5: Tax 750DKK & "*theta* "= 0.27")),lty=c(1),lwd=c(2),bty="n", col = c("black","blue","yellow","darkgreen","darkorange"), cex=1.1); grid()
+
+
+plot(window((Exo_model_S1$simulation$fnw_h - Exo_model$simulation$fnw_h)/Exo_model$simulation$y, start=c(2020,1))*100, ylim=c(-0.7,0.7),col= "black", ylab= "Change from baseline (relative to GDP)"  , main= "Households", lwd=3, xlab="", cex.main=1.5);
+lines(window((Exo_model_S2$simulation$fnw_h - Exo_model$simulation$fnw_h)/Exo_model$simulation$y, start=c(2020,1))*100, col = "blue", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S3$simulation$fnw_h - Exo_model$simulation$fnw_h)/Exo_model$simulation$y, start=c(2020,1))*100, col = "yellow", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S4$simulation$fnw_h - Exo_model$simulation$fnw_h)/Exo_model$simulation$y, start=c(2020,1))*100, col = "darkgreen", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S5$simulation$fnw_h - Exo_model$simulation$fnw_h)/Exo_model$simulation$y, start=c(2020,1))*100, col = "darkorange", lwd=3,lty= 1, xlab="");legend("bottomleft",legend=c(expression("Scenario 1: Tax 350DKK & "*theta* "= 0.85"),expression("Scenario 2: Tax 450DKK & "*theta* "= 0.55"),expression("Scenario 3: Tax 550DKK & "*theta* "= 0.41"),expression("Scenario 4: Tax 650DKK & "*theta* "= 0.33"),expression("Scenario 5: Tax 750DKK & "*theta* "= 0.27")),lty=c(1),lwd=c(2),bty="n", col = c("black","blue","yellow","darkgreen","darkorange"), cex=1.1); grid()
+
+
+
+plot(window((Exo_model_S1$simulation$fnw_nfc - Exo_model$simulation$fnw_nfc)/Exo_model$simulation$y, start=c(2020,1))*100, ylim=c(-0.7,0.7),col= "black", ylab= "Change from baseline (relative to GDP)"  , main= "Non-financial corporations", lwd=3, xlab="", cex.main=1.5);
+lines(window((Exo_model_S2$simulation$fnw_nfc - Exo_model$simulation$fnw_nfc)/Exo_model$simulation$y, start=c(2020,1))*100, col = "blue", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S3$simulation$fnw_nfc - Exo_model$simulation$fnw_nfc)/Exo_model$simulation$y, start=c(2020,1))*100, col = "yellow", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S4$simulation$fnw_nfc - Exo_model$simulation$fnw_nfc)/Exo_model$simulation$y, start=c(2020,1))*100, col = "darkgreen", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S5$simulation$fnw_nfc - Exo_model$simulation$fnw_nfc)/Exo_model$simulation$y, start=c(2020,1))*100, col = "darkorange", lwd=3,lty= 1, xlab="");legend("bottomleft",legend=c(expression("Scenario 1: Tax 350DKK & "*theta* "= 0.85"),expression("Scenario 2: Tax 450DKK & "*theta* "= 0.55"),expression("Scenario 3: Tax 550DKK & "*theta* "= 0.41"),expression("Scenario 4: Tax 650DKK & "*theta* "= 0.33"),expression("Scenario 5: Tax 750DKK & "*theta* "= 0.27")),lty=c(1),lwd=c(2),bty="n", col = c("black","blue","yellow","darkgreen","darkorange"), cex=1.1); grid()
+
+
+
+plot(window((Exo_model_S1$simulation$fnw_row - Exo_model$simulation$fnw_row)/Exo_model$simulation$y, start=c(2020,1))*100, ylim=c(-0.7,0.7),col= "black", ylab= "Change from baseline (relative to GDP)"  , main= "Rest of the world", lwd=3, xlab="", cex.main=1.5);
+lines(window((Exo_model_S2$simulation$fnw_row - Exo_model$simulation$fnw_row)/Exo_model$simulation$y, start=c(2020,1))*100, col = "blue", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S3$simulation$fnw_row - Exo_model$simulation$fnw_row)/Exo_model$simulation$y, start=c(2020,1))*100, col = "yellow", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S4$simulation$fnw_row - Exo_model$simulation$fnw_row)/Exo_model$simulation$y, start=c(2020,1))*100, col = "darkgreen", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S5$simulation$fnw_row - Exo_model$simulation$fnw_row)/Exo_model$simulation$y, start=c(2020,1))*100, col = "darkorange", lwd=3,lty= 1, xlab="");legend("bottomleft",legend=c(expression("Scenario 1: Tax 350DKK & "*theta* "= 0.85"),expression("Scenario 2: Tax 450DKK & "*theta* "= 0.55"),expression("Scenario 3: Tax 550DKK & "*theta* "= 0.41"),expression("Scenario 4: Tax 650DKK & "*theta* "= 0.33"),expression("Scenario 5: Tax 750DKK & "*theta* "= 0.27")),lty=c(1),lwd=c(2),bty="n", col = c("black","blue","yellow","darkgreen","darkorange"), cex=1.1); grid()
+
+
+
+plot(window((Exo_model_S1$simulation$fnw_fc - Exo_model$simulation$fnw_fc)/Exo_model$simulation$y, start=c(2020,1))*100, ylim=c(-0.7,0.7),col= "black", ylab= "Change from baseline (relative to GDP)"  , main= "Financial corporations", lwd=3, xlab="", cex.main=1.5);
+lines(window((Exo_model_S2$simulation$fnw_fc - Exo_model$simulation$fnw_fc)/Exo_model$simulation$y, start=c(2020,1))*100, col = "blue", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S3$simulation$fnw_fc - Exo_model$simulation$fnw_fc)/Exo_model$simulation$y, start=c(2020,1))*100, col = "yellow", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S4$simulation$fnw_fc - Exo_model$simulation$fnw_fc)/Exo_model$simulation$y, start=c(2020,1))*100, col = "darkgreen", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S5$simulation$fnw_fc - Exo_model$simulation$fnw_fc)/Exo_model$simulation$y, start=c(2020,1))*100, col = "darkorange", lwd=3,lty= 1, xlab="");legend("bottomleft",legend=c(expression("Scenario 1: Tax 350DKK & "*theta* "= 0.85"),expression("Scenario 2: Tax 450DKK & "*theta* "= 0.55"),expression("Scenario 3: Tax 550DKK & "*theta* "= 0.41"),expression("Scenario 4: Tax 650DKK & "*theta* "= 0.33"),expression("Scenario 5: Tax 750DKK & "*theta* "= 0.27")),lty=c(1),lwd=c(2),bty="n", col = c("black","blue","yellow","darkgreen","darkorange"), cex=1.1); grid()
+
+
+
+
+plot(window((Exo_model_S1$simulation$fnw_agri - Exo_model$simulation$fnw_agri)/Exo_model$simulation$y, start=c(2020,1))*100, ylim=c(-0.8,0.7),col= "black", ylab= "Change from baseline (relative to GDP)"  , main= "Financial net wealth Agriculture", lwd=3, xlab="", cex.main=1.5);
+lines(window((Exo_model_S2$simulation$fnw_agri - Exo_model$simulation$fnw_agri)/Exo_model$simulation$y, start=c(2020,1))*100, col = "blue", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S3$simulation$fnw_agri - Exo_model$simulation$fnw_agri)/Exo_model$simulation$y, start=c(2020,1))*100, col = "yellow", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S4$simulation$fnw_agri - Exo_model$simulation$fnw_agri)/Exo_model$simulation$y, start=c(2020,1))*100, col = "darkgreen", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S5$simulation$fnw_agri - Exo_model$simulation$fnw_agri)/Exo_model$simulation$y, start=c(2020,1))*100, col = "darkorange", lwd=3,lty= 1, xlab="");legend("bottomleft",legend=c(expression("Scenario 1: Tax 350DKK & "*theta* "= 0.85"),expression("Scenario 2: Tax 450DKK & "*theta* "= 0.55"),expression("Scenario 3: Tax 550DKK & "*theta* "= 0.41"),expression("Scenario 4: Tax 650DKK & "*theta* "= 0.33"),expression("Scenario 5: Tax 750DKK & "*theta* "= 0.27")),lty=c(1),lwd=c(2),bty="n", col = c("black","blue","yellow","darkgreen","darkorange"), cex=1.1); grid()
+
+
+
+# Adding a collective title for both plots
+mtext("Financial net wealth", side = 3, outer = TRUE, line = 1, cex = 1.5)
+```
+
+
+# Agri finance
+
+```{r, fig.width=15, fig.height=7}
+
+
+par(mfrow = c(1, 2), oma = c(0, 0, 3, 0))  # oma sets the outer margins
+
+theme_journal()
+
+
+plot(Exo_model$simulation$Debt_ratio,col= "red", ylab= "Change in units" , main= "Debt to capital ratio", lwd=3, xlab="", cex.main=1.5);
+lines(Exo_model_S1$simulation$Debt_ratio, col = "black", lwd=3,lty= 1, xlab="");
+lines(Exo_model_S2$simulation$Debt_ratio, col = "blue", lwd=3,lty= 1, xlab="");
+lines(Exo_model_S3$simulation$Debt_ratio, col = "yellow", lwd=3,lty= 1, xlab="");
+lines(Exo_model_S4$simulation$Debt_ratio, col = "darkgreen", lwd=3,lty= 1, xlab="");
+lines(Exo_model_S5$simulation$Debt_ratio, col = "darkorange", lwd=3,lty= 1, xlab="");legend("bottomleft",legend=c(expression("Baseline"),expression("Scenario 1: Tax 350DKK & "*theta* "= 0.85"),expression("Scenario 2: Tax 450DKK & "*theta* "= 0.55"),expression("Scenario 3: Tax 550DKK & "*theta* "= 0.41"),expression("Scenario 4: Tax 650DKK & "*theta* "= 0.33"),expression("Scenario 5: Tax 750DKK & "*theta* "= 0.27")),lty=c(1),lwd=c(2),bty="n", col = c("red","black","blue","yellow","darkgreen","darkorange"), cex=1.1); grid()
+
+
+
+plot(Exo_model$simulation$Likvid_ratio,col= "red", ylab= "Change in units" , main= "Liquitity ratio", lwd=3, xlab="", cex.main=1.5, ylim= c());
+lines(Exo_model_S1$simulation$Likvid_ratio, col = "black", lwd=3,lty= 1, xlab="");
+lines(Exo_model_S2$simulation$Likvid_ratio, col = "blue", lwd=3,lty= 1, xlab="");
+lines(Exo_model_S3$simulation$Likvid_ratio, col = "yellow", lwd=3,lty= 1, xlab="");
+lines(Exo_model_S4$simulation$Likvid_ratio, col = "darkgreen", lwd=3,lty= 1, xlab="");
+lines(Exo_model_S5$simulation$Likvid_ratio, col = "darkorange", lwd=3,lty= 1, xlab="");legend("bottomleft",legend=c(expression("Baseline"),expression("Scenario 1: Tax 350DKK & "*theta* "= 0.85"),expression("Scenario 2: Tax 450DKK & "*theta* "= 0.55"),expression("Scenario 3: Tax 550DKK & "*theta* "= 0.41"),expression("Scenario 4: Tax 650DKK & "*theta* "= 0.33"),expression("Scenario 5: Tax 750DKK & "*theta* "= 0.27")),lty=c(1),lwd=c(2),bty="n", col = c("red","black","blue","yellow","darkgreen","darkorange"), cex=1.1); grid()
+
+
+
+# Adding a collective title for both plots
+mtext("Financial stability agriculture", side = 3, outer = TRUE, line = 1, cex = 1.5)
+```
+
+
+
+
+
+
+
+
+# Appendix B Government neutrality
+
+## Tax-rates
+
+```{r, fig.width=10, fig.height=7}
+plot(window(S_modelData_F$sben_r_h_BS - S_modelData_F$sben_r_h_BS, start= c(2020,1), end= c(2035,1)),col= "red", ylab= "Level change from BS (B. DKK)" , main= "Social benefits received by Households", lwd=3, xlab="", cex.main=1.5, ylim= c(-5,15));
+lines(window(Renorm_S1$modelData$sben_r_h_BS - S_modelData_F$sben_r_h_BS, start= c(2020,1), end= c(2035,1)), col = "black", lwd=3,lty= 1, xlab="");
+lines(window(Renorm_S2$modelData$sben_r_h_BS - S_modelData_F$sben_r_h_BS, start= c(2020,1), end= c(2035,1)), col = "blue", lwd=3,lty= 1, xlab="");
+lines(window(Renorm_S3$modelData$sben_r_h_BS - S_modelData_F$sben_r_h_BS, start= c(2020,1), end= c(2035,1)), col = "yellow", lwd=3,lty= 1, xlab="");
+lines(window(Renorm_S4$modelData$sben_r_h_BS - S_modelData_F$sben_r_h_BS, start= c(2020,1), end= c(2035,1)), col = "darkgreen", lwd=3,lty= 1, xlab="");
+lines(window(Renorm_S5$modelData$sben_r_h_BS - S_modelData_F$sben_r_h_BS, start= c(2020,1), end= c(2035,1)), col = "darkorange", lwd=3,lty= 1, xlab=""); legend("topleft",legend=c(expression("Baseline"),expression("Scenario 1: Tax 350DKK & "*theta* "= 0.85"),expression("Scenario 2: Tax 450DKK & "*theta* "= 0.55"),expression("Scenario 3: Tax 550DKK & "*theta* "= 0.41"),expression("Scenario 4: Tax 650DKK & "*theta* "= 0.33"),expression("Scenario 5: Tax 750DKK & "*theta* "= 0.27")),lty=c(1),lwd=c(2),bty="n", col = c("red","black","blue","yellow","darkgreen","darkorange"), cex=1.1); grid()
+```
+
+
+## Government NO resycling
+
+No Government re-sycling
+
+
+### Tax 350
+
+```{r, results='hide'}
+# Simulate the model (following shock)
+Exo_model_S1_NO_re <- SIMULATE(S_model
+                    ,simType='FORECAST'
+                    ,TSRANGE=c(2000,1,2035,1)
+                    ,simConvergence=0.0001
+                    ,simIterLimit=200
+                    ,ConstantAdjustment=constantAdjList_s1
+                    ,Exogenize = exogenizeList
+                    )
+```
+
+### Tax 450
+
+```{r, results='hide'}
+# Simulate the model (following shock)
+Exo_model_S2_NO_re <- SIMULATE(S_model
+                    ,simType='FORECAST'
+                    ,TSRANGE=c(2000,1,2035,1)
+                    ,simConvergence=0.0001
+                    ,simIterLimit=200
+                    ,ConstantAdjustment=constantAdjList_s2
+                    ,Exogenize = exogenizeList
+                    )
+```
+
+### Tax 550
+
+```{r, results='hide'}
+# Simulate the model (following shock)
+Exo_model_S3_NO_re <- SIMULATE(S_model
+                    ,simType='FORECAST'
+                    ,TSRANGE=c(2000,1,2035,1)
+                    ,simConvergence=0.0001
+                    ,simIterLimit=200
+                    ,ConstantAdjustment=constantAdjList_s3
+                    ,Exogenize = exogenizeList
+                    )
+```
+
+### Tax 650
+
+```{r, results='hide'}
+# Simulate the model (following shock)
+Exo_model_S4_NO_re <- SIMULATE(S_model
+                    ,simType='FORECAST'
+                    ,TSRANGE=c(2000,1,2035,1)
+                    ,simConvergence=0.0001
+                    ,simIterLimit=200
+                    ,ConstantAdjustment=constantAdjList_s4
+                    ,Exogenize = exogenizeList
+                    )
+```
+
+### Tax 750
+
+```{r, results='hide'}
+# Simulate the model (following shock)
+Exo_model_S5_NO_re <- SIMULATE(S_model
+                    ,simType='FORECAST'
+                    ,TSRANGE=c(2000,1,2035,1)
+                    ,simConvergence=0.0001
+                    ,simIterLimit=200
+                    ,ConstantAdjustment=constantAdjList_s5
+                    ,Exogenize = exogenizeList
+                    )
+```
+
+
+
+```{r, fig.width=20, fig.height=12}
+
+
+par(mfrow = c(2, 3), oma = c(0, 0, 3, 0))  # oma sets the outer margins
+
+theme_journal()
+
+
+
+
+plot(window((Exo_model_S1_NO_re$simulation$fnw_g - Exo_model$simulation$fnw_g)/Exo_model$simulation$y, start=c(2020,1))*100, ylim=c(-0.7,0.7),col= "black", ylab= "Change from baseline (relative to GDP)" , main= "Government", lwd=3, xlab="", cex.main=1.5);
+lines(window((Exo_model_S2_NO_re$simulation$fnw_g - Exo_model$simulation$fnw_g)/Exo_model$simulation$y, start=c(2020,1))*100, col = "blue", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S3_NO_re$simulation$fnw_g - Exo_model$simulation$fnw_g)/Exo_model$simulation$y, start=c(2020,1))*100, col = "yellow", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S4_NO_re$simulation$fnw_g - Exo_model$simulation$fnw_g)/Exo_model$simulation$y, start=c(2020,1))*100, col = "darkgreen", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S5_NO_re$simulation$fnw_g - Exo_model$simulation$fnw_g)/Exo_model$simulation$y, start=c(2020,1))*100, col = "darkorange", lwd=3,lty= 1, xlab="");legend("bottomleft",legend=c(expression("Scenario 1: Tax 350DKK & "*theta* "= 0.85"),expression("Scenario 2: Tax 450DKK & "*theta* "= 0.55"),expression("Scenario 3: Tax 550DKK & "*theta* "= 0.41"),expression("Scenario 4: Tax 650DKK & "*theta* "= 0.33"),expression("Scenario 5: Tax 750DKK & "*theta* "= 0.27")),lty=c(1),lwd=c(2),bty="n", col = c("black","blue","yellow","darkgreen","darkorange"), cex=1.1); grid()
+
+
+plot(window((Exo_model_S1_NO_re$simulation$fnw_h - Exo_model$simulation$fnw_h)/Exo_model$simulation$y, start=c(2020,1))*100, ylim=c(-0.7,0.7),col= "black", ylab= "Change from baseline (relative to GDP)"  , main= "Households", lwd=3, xlab="", cex.main=1.5);
+lines(window((Exo_model_S2_NO_re$simulation$fnw_h - Exo_model$simulation$fnw_h)/Exo_model$simulation$y, start=c(2020,1))*100, col = "blue", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S3_NO_re$simulation$fnw_h - Exo_model$simulation$fnw_h)/Exo_model$simulation$y, start=c(2020,1))*100, col = "yellow", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S4_NO_re$simulation$fnw_h - Exo_model$simulation$fnw_h)/Exo_model$simulation$y, start=c(2020,1))*100, col = "darkgreen", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S5_NO_re$simulation$fnw_h - Exo_model$simulation$fnw_h)/Exo_model$simulation$y, start=c(2020,1))*100, col = "darkorange", lwd=3,lty= 1, xlab="");legend("bottomleft",legend=c(expression("Scenario 1: Tax 350DKK & "*theta* "= 0.85"),expression("Scenario 2: Tax 450DKK & "*theta* "= 0.55"),expression("Scenario 3: Tax 550DKK & "*theta* "= 0.41"),expression("Scenario 4: Tax 650DKK & "*theta* "= 0.33"),expression("Scenario 5: Tax 750DKK & "*theta* "= 0.27")),lty=c(1),lwd=c(2),bty="n", col = c("black","blue","yellow","darkgreen","darkorange"), cex=1.1); grid()
+
+
+
+plot(window((Exo_model_S1_NO_re$simulation$fnw_nfc - Exo_model$simulation$fnw_nfc)/Exo_model$simulation$y, start=c(2020,1))*100, ylim=c(-0.7,0.7),col= "black", ylab= "Change from baseline (relative to GDP)"  , main= "Non-financial corporations", lwd=3, xlab="", cex.main=1.5);
+lines(window((Exo_model_S2_NO_re$simulation$fnw_nfc - Exo_model$simulation$fnw_nfc)/Exo_model$simulation$y, start=c(2020,1))*100, col = "blue", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S3_NO_re$simulation$fnw_nfc - Exo_model$simulation$fnw_nfc)/Exo_model$simulation$y, start=c(2020,1))*100, col = "yellow", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S4_NO_re$simulation$fnw_nfc - Exo_model$simulation$fnw_nfc)/Exo_model$simulation$y, start=c(2020,1))*100, col = "darkgreen", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S5_NO_re$simulation$fnw_nfc - Exo_model$simulation$fnw_nfc)/Exo_model$simulation$y, start=c(2020,1))*100, col = "darkorange", lwd=3,lty= 1, xlab="");legend("bottomleft",legend=c(expression("Scenario 1: Tax 350DKK & "*theta* "= 0.85"),expression("Scenario 2: Tax 450DKK & "*theta* "= 0.55"),expression("Scenario 3: Tax 550DKK & "*theta* "= 0.41"),expression("Scenario 4: Tax 650DKK & "*theta* "= 0.33"),expression("Scenario 5: Tax 750DKK & "*theta* "= 0.27")),lty=c(1),lwd=c(2),bty="n", col = c("black","blue","yellow","darkgreen","darkorange"), cex=1.1); grid()
+
+
+
+plot(window((Exo_model_S1_NO_re$simulation$fnw_row - Exo_model$simulation$fnw_row)/Exo_model$simulation$y, start=c(2020,1))*100, ylim=c(-0.7,0.7),col= "black", ylab= "Change from baseline (relative to GDP)"  , main= "Rest of the world", lwd=3, xlab="", cex.main=1.5);
+lines(window((Exo_model_S2_NO_re$simulation$fnw_row - Exo_model$simulation$fnw_row)/Exo_model$simulation$y, start=c(2020,1))*100, col = "blue", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S3_NO_re$simulation$fnw_row - Exo_model$simulation$fnw_row)/Exo_model$simulation$y, start=c(2020,1))*100, col = "yellow", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S4_NO_re$simulation$fnw_row - Exo_model$simulation$fnw_row)/Exo_model$simulation$y, start=c(2020,1))*100, col = "darkgreen", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S5_NO_re$simulation$fnw_row - Exo_model$simulation$fnw_row)/Exo_model$simulation$y, start=c(2020,1))*100, col = "darkorange", lwd=3,lty= 1, xlab="");legend("bottomleft",legend=c(expression("Scenario 1: Tax 350DKK & "*theta* "= 0.85"),expression("Scenario 2: Tax 450DKK & "*theta* "= 0.55"),expression("Scenario 3: Tax 550DKK & "*theta* "= 0.41"),expression("Scenario 4: Tax 650DKK & "*theta* "= 0.33"),expression("Scenario 5: Tax 750DKK & "*theta* "= 0.27")),lty=c(1),lwd=c(2),bty="n", col = c("black","blue","yellow","darkgreen","darkorange"), cex=1.1); grid()
+
+
+
+plot(window((Exo_model_S1_NO_re$simulation$fnw_fc - Exo_model$simulation$fnw_fc)/Exo_model$simulation$y, start=c(2020,1))*100, ylim=c(-0.7,0.7),col= "black", ylab= "Change from baseline (relative to GDP)"  , main= "Financial corporations", lwd=3, xlab="", cex.main=1.5);
+lines(window((Exo_model_S2_NO_re$simulation$fnw_fc - Exo_model$simulation$fnw_fc)/Exo_model$simulation$y, start=c(2020,1))*100, col = "blue", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S3_NO_re$simulation$fnw_fc - Exo_model$simulation$fnw_fc)/Exo_model$simulation$y, start=c(2020,1))*100, col = "yellow", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S4_NO_re$simulation$fnw_fc - Exo_model$simulation$fnw_fc)/Exo_model$simulation$y, start=c(2020,1))*100, col = "darkgreen", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S5_NO_re$simulation$fnw_fc - Exo_model$simulation$fnw_fc)/Exo_model$simulation$y, start=c(2020,1))*100, col = "darkorange", lwd=3,lty= 1, xlab="");legend("bottomleft",legend=c(expression("Scenario 1: Tax 350DKK & "*theta* "= 0.85"),expression("Scenario 2: Tax 450DKK & "*theta* "= 0.55"),expression("Scenario 3: Tax 550DKK & "*theta* "= 0.41"),expression("Scenario 4: Tax 650DKK & "*theta* "= 0.33"),expression("Scenario 5: Tax 750DKK & "*theta* "= 0.27")),lty=c(1),lwd=c(2),bty="n", col = c("black","blue","yellow","darkgreen","darkorange"), cex=1.1); grid()
+
+
+
+
+plot(window((Exo_model_S1_NO_re$simulation$fnw_agri - Exo_model$simulation$fnw_agri)/Exo_model$simulation$y, start=c(2020,1))*100, ylim=c(-0.8,0.7),col= "black", ylab= "Change from baseline (relative to GDP)"  , main= "Financial net wealth Agriculture", lwd=3, xlab="", cex.main=1.5);
+lines(window((Exo_model_S2_NO_re$simulation$fnw_agri - Exo_model$simulation$fnw_agri)/Exo_model$simulation$y, start=c(2020,1))*100, col = "blue", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S3_NO_re$simulation$fnw_agri - Exo_model$simulation$fnw_agri)/Exo_model$simulation$y, start=c(2020,1))*100, col = "yellow", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S4_NO_re$simulation$fnw_agri - Exo_model$simulation$fnw_agri)/Exo_model$simulation$y, start=c(2020,1))*100, col = "darkgreen", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S5_NO_re$simulation$fnw_agri - Exo_model$simulation$fnw_agri)/Exo_model$simulation$y, start=c(2020,1))*100, col = "darkorange", lwd=3,lty= 1, xlab="");legend("bottomleft",legend=c(expression("Scenario 1: Tax 350DKK & "*theta* "= 0.85"),expression("Scenario 2: Tax 450DKK & "*theta* "= 0.55"),expression("Scenario 3: Tax 550DKK & "*theta* "= 0.41"),expression("Scenario 4: Tax 650DKK & "*theta* "= 0.33"),expression("Scenario 5: Tax 750DKK & "*theta* "= 0.27")),lty=c(1),lwd=c(2),bty="n", col = c("black","blue","yellow","darkgreen","darkorange"), cex=1.1); grid()
+
+
+
+# Adding a collective title for both plots
+mtext("Financial net wealth", side = 3, outer = TRUE, line = 1, cex = 1.5)
+```
+
+
+```{r}
+
+plot(window((Exo_model_S1_NO_re$simulation$ppcon - Exo_model$simulation$ppcon)/Exo_model$simulation$ppcon, start=c(2020,1))*100, ylim=c(-0.8,0.7),col= "black", ylab= "Change from baseline (relative to GDP)"  , main= "Financial net wealth Agriculture", lwd=3, xlab="", cex.main=1.5);
+lines(window((Exo_model_S2_NO_re$simulation$ppcon - Exo_model$simulation$ppcon)/Exo_model$simulation$ppcon, start=c(2020,1))*100, col = "blue", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S3_NO_re$simulation$ppcon - Exo_model$simulation$ppcon)/Exo_model$simulation$ppcon, start=c(2020,1))*100, col = "yellow", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S4_NO_re$simulation$ppcon - Exo_model$simulation$ppcon)/Exo_model$simulation$ppcon, start=c(2020,1))*100, col = "darkgreen", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S5_NO_re$simulation$ppcon - Exo_model$simulation$ppcon)/Exo_model$simulation$ppcon, start=c(2020,1))*100, col = "darkorange", lwd=3,lty= 1, xlab="");legend("bottomleft",legend=c(expression("Scenario 1: Tax 350DKK & "*theta* "= 0.71"),expression("Scenario 2: Tax 450DKK & "*theta* "= 0.46"),expression("Scenario 3: Tax 550DKK & "*theta* "= 0.32"),expression("Scenario 4: Tax 650DKK & "*theta* "= 0.25"),expression("Scenario 5: Tax 750DKK & "*theta* "= 0.21")),lty=c(1),lwd=c(2),bty="n", col = c("black","blue","yellow","darkgreen","darkorange"), cex=1.1); grid()
+```
+
+
+
+
+## Government NO resycling
+
+Full Government re-sycling
+
+
+### Tax 350
+
+
+
+
+```{r}
+
+Gov_sens_1_shock= S_modelData$Gov_sens %>% window(start= c(2028,1))
+```
+
+
+
+```{r}
+# Define add-factor list (defining shock)
+constantAdjList_s1_Sens <- list(
+  
+Scenario_1 = TIMESERIES(Scenario_1_shock+1 ,START=c(2028,1),  FREQ=1),
+Gov_sens = TIMESERIES(Gov_sens_1_shock+1 ,START=c(2028,1),  FREQ=1)
+)
+
+```
+
+
+```{r, results='hide'}
+# Simulate the model (following shock)
+Exo_model_S1_FULL_re <- SIMULATE(S_model
+                    ,simType='FORECAST'
+                    ,TSRANGE=c(2000,1,2035,1)
+                    ,simConvergence=0.0001
+                    ,simIterLimit=200
+                    ,ConstantAdjustment=constantAdjList_s1_Sens
+                    ,Exogenize = exogenizeList
+                    )
+```
+
+### Tax 450
+
+
+
+```{r}
+# Define add-factor list (defining shock)
+constantAdjList_s2_Sens <- list(
+  
+Scenario_2 = TIMESERIES(Scenario_2_shock+1 ,START=c(2028,1),  FREQ=1),
+Gov_sens = TIMESERIES(Gov_sens_1_shock+1 ,START=c(2028,1),  FREQ=1)
+)
+
+```
+
+```{r, results='hide'}
+# Simulate the model (following shock)
+Exo_model_S2_FULL_re <- SIMULATE(S_model
+                    ,simType='FORECAST'
+                    ,TSRANGE=c(2000,1,2035,1)
+                    ,simConvergence=0.0001
+                    ,simIterLimit=200
+                    ,ConstantAdjustment=constantAdjList_s2_Sens
+                    ,Exogenize = exogenizeList
+                    )
+```
+
+### Tax 550
+
+
+
+```{r}
+# Define add-factor list (defining shock)
+constantAdjList_s3_Sens <- list(
+  
+Scenario_3 = TIMESERIES(Scenario_3_shock+1 ,START=c(2028,1),  FREQ=1),
+Gov_sens = TIMESERIES(Gov_sens_1_shock+1 ,START=c(2028,1),  FREQ=1)
+)
+
+```
+
+```{r, results='hide'}
+# Simulate the model (following shock)
+Exo_model_S3_FULL_re <- SIMULATE(S_model
+                    ,simType='FORECAST'
+                    ,TSRANGE=c(2000,1,2035,1)
+                    ,simConvergence=0.0001
+                    ,simIterLimit=200
+                    ,ConstantAdjustment=constantAdjList_s3_Sens
+                    ,Exogenize = exogenizeList
+                    )
+```
+
+### Tax 650
+
+
+
+```{r}
+# Define add-factor list (defining shock)
+constantAdjList_s4_Sens <- list(
+  
+Scenario_4 = TIMESERIES(Scenario_4_shock+1 ,START=c(2028,1),  FREQ=1),
+Gov_sens = TIMESERIES(Gov_sens_1_shock+1 ,START=c(2028,1),  FREQ=1)
+)
+
+```
+
+```{r, results='hide'}
+# Simulate the model (following shock)
+Exo_model_S4_FULL_re <- SIMULATE(S_model
+                    ,simType='FORECAST'
+                    ,TSRANGE=c(2000,1,2035,1)
+                    ,simConvergence=0.0001
+                    ,simIterLimit=200
+                    ,ConstantAdjustment=constantAdjList_s4_Sens
+                    ,Exogenize = exogenizeList
+                    )
+```
+
+### Tax 750
+
+
+
+```{r}
+# Define add-factor list (defining shock)
+constantAdjList_s5_Sens <- list(
+  
+Scenario_5 = TIMESERIES(Scenario_5_shock+1 ,START=c(2028,1),  FREQ=1),
+Gov_sens = TIMESERIES(Gov_sens_1_shock+1 ,START=c(2028,1),  FREQ=1)
+)
+
+```
+
+```{r, results='hide'}
+# Simulate the model (following shock)
+Exo_model_S5_FULL_re <- SIMULATE(S_model
+                    ,simType='FORECAST'
+                    ,TSRANGE=c(2000,1,2035,1)
+                    ,simConvergence=0.0001
+                    ,simIterLimit=200
+                    ,ConstantAdjustment=constantAdjList_s5_Sens
+                    ,Exogenize = exogenizeList
+                    )
+```
+
+
+
+```{r, fig.width=20, fig.height=12}
+
+
+par(mfrow = c(2, 3), oma = c(0, 0, 3, 0))  # oma sets the outer margins
+
+theme_journal()
+
+
+
+
+plot(window((Exo_model_S1_FULL_re$simulation$fnw_g - Exo_model$simulation$fnw_g)/Exo_model$simulation$y, start=c(2020,1))*100, ylim=c(-0.7,0.7),col= "black", ylab= "Change from baseline (relative to GDP)" , main= "Government", lwd=3, xlab="", cex.main=1.5);
+lines(window((Exo_model_S2_FULL_re$simulation$fnw_g - Exo_model$simulation$fnw_g)/Exo_model$simulation$y, start=c(2020,1))*100, col = "blue", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S3_FULL_re$simulation$fnw_g - Exo_model$simulation$fnw_g)/Exo_model$simulation$y, start=c(2020,1))*100, col = "yellow", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S4_FULL_re$simulation$fnw_g - Exo_model$simulation$fnw_g)/Exo_model$simulation$y, start=c(2020,1))*100, col = "darkgreen", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S5_FULL_re$simulation$fnw_g - Exo_model$simulation$fnw_g)/Exo_model$simulation$y, start=c(2020,1))*100, col = "darkorange", lwd=3,lty= 1, xlab="");legend("bottomleft",legend=c(expression("Scenario 1: Tax 350DKK & "*theta* "= 0.85"),expression("Scenario 2: Tax 450DKK & "*theta* "= 0.55"),expression("Scenario 3: Tax 550DKK & "*theta* "= 0.41"),expression("Scenario 4: Tax 650DKK & "*theta* "= 0.33"),expression("Scenario 5: Tax 750DKK & "*theta* "= 0.27")),lty=c(1),lwd=c(2),bty="n", col = c("black","blue","yellow","darkgreen","darkorange"), cex=1.1); grid()
+
+
+plot(window((Exo_model_S1_FULL_re$simulation$fnw_h - Exo_model$simulation$fnw_h)/Exo_model$simulation$y, start=c(2020,1))*100, ylim=c(-0.7,0.7),col= "black", ylab= "Change from baseline (relative to GDP)"  , main= "Households", lwd=3, xlab="", cex.main=1.5);
+lines(window((Exo_model_S2_FULL_re$simulation$fnw_h - Exo_model$simulation$fnw_h)/Exo_model$simulation$y, start=c(2020,1))*100, col = "blue", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S3_FULL_re$simulation$fnw_h - Exo_model$simulation$fnw_h)/Exo_model$simulation$y, start=c(2020,1))*100, col = "yellow", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S4_FULL_re$simulation$fnw_h - Exo_model$simulation$fnw_h)/Exo_model$simulation$y, start=c(2020,1))*100, col = "darkgreen", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S5_FULL_re$simulation$fnw_h - Exo_model$simulation$fnw_h)/Exo_model$simulation$y, start=c(2020,1))*100, col = "darkorange", lwd=3,lty= 1, xlab="");legend("bottomleft",legend=c(expression("Scenario 1: Tax 350DKK & "*theta* "= 0.85"),expression("Scenario 2: Tax 450DKK & "*theta* "= 0.55"),expression("Scenario 3: Tax 550DKK & "*theta* "= 0.41"),expression("Scenario 4: Tax 650DKK & "*theta* "= 0.33"),expression("Scenario 5: Tax 750DKK & "*theta* "= 0.27")),lty=c(1),lwd=c(2),bty="n", col = c("black","blue","yellow","darkgreen","darkorange"), cex=1.1); grid()
+
+
+
+plot(window((Exo_model_S1_FULL_re$simulation$fnw_nfc - Exo_model$simulation$fnw_nfc)/Exo_model$simulation$y, start=c(2020,1))*100, ylim=c(-0.7,0.7),col= "black", ylab= "Change from baseline (relative to GDP)"  , main= "Non-financial corporations", lwd=3, xlab="", cex.main=1.5);
+lines(window((Exo_model_S2_FULL_re$simulation$fnw_nfc - Exo_model$simulation$fnw_nfc)/Exo_model$simulation$y, start=c(2020,1))*100, col = "blue", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S3_FULL_re$simulation$fnw_nfc - Exo_model$simulation$fnw_nfc)/Exo_model$simulation$y, start=c(2020,1))*100, col = "yellow", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S4_FULL_re$simulation$fnw_nfc - Exo_model$simulation$fnw_nfc)/Exo_model$simulation$y, start=c(2020,1))*100, col = "darkgreen", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S5_FULL_re$simulation$fnw_nfc - Exo_model$simulation$fnw_nfc)/Exo_model$simulation$y, start=c(2020,1))*100, col = "darkorange", lwd=3,lty= 1, xlab="");legend("bottomleft",legend=c(expression("Scenario 1: Tax 350DKK & "*theta* "= 0.85"),expression("Scenario 2: Tax 450DKK & "*theta* "= 0.55"),expression("Scenario 3: Tax 550DKK & "*theta* "= 0.41"),expression("Scenario 4: Tax 650DKK & "*theta* "= 0.33"),expression("Scenario 5: Tax 750DKK & "*theta* "= 0.27")),lty=c(1),lwd=c(2),bty="n", col = c("black","blue","yellow","darkgreen","darkorange"), cex=1.1); grid()
+
+
+
+plot(window((Exo_model_S1_FULL_re$simulation$fnw_row - Exo_model$simulation$fnw_row)/Exo_model$simulation$y, start=c(2020,1))*100, ylim=c(-0.7,0.9),col= "black", ylab= "Change from baseline (relative to GDP)"  , main= "Rest of the world", lwd=3, xlab="", cex.main=1.5);
+lines(window((Exo_model_S2_FULL_re$simulation$fnw_row - Exo_model$simulation$fnw_row)/Exo_model$simulation$y, start=c(2020,1))*100, col = "blue", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S3_FULL_re$simulation$fnw_row - Exo_model$simulation$fnw_row)/Exo_model$simulation$y, start=c(2020,1))*100, col = "yellow", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S4_FULL_re$simulation$fnw_row - Exo_model$simulation$fnw_row)/Exo_model$simulation$y, start=c(2020,1))*100, col = "darkgreen", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S5_FULL_re$simulation$fnw_row - Exo_model$simulation$fnw_row)/Exo_model$simulation$y, start=c(2020,1))*100, col = "darkorange", lwd=3,lty= 1, xlab="");legend("bottomleft",legend=c(expression("Scenario 1: Tax 350DKK & "*theta* "= 0.85"),expression("Scenario 2: Tax 450DKK & "*theta* "= 0.55"),expression("Scenario 3: Tax 550DKK & "*theta* "= 0.41"),expression("Scenario 4: Tax 650DKK & "*theta* "= 0.33"),expression("Scenario 5: Tax 750DKK & "*theta* "= 0.27")),lty=c(1),lwd=c(2),bty="n", col = c("black","blue","yellow","darkgreen","darkorange"), cex=1.1); grid()
+
+
+
+plot(window((Exo_model_S1_FULL_re$simulation$fnw_fc - Exo_model$simulation$fnw_fc)/Exo_model$simulation$y, start=c(2020,1))*100, ylim=c(-0.7,0.7),col= "black", ylab= "Change from baseline (relative to GDP)"  , main= "Financial corporations", lwd=3, xlab="", cex.main=1.5);
+lines(window((Exo_model_S2_FULL_re$simulation$fnw_fc - Exo_model$simulation$fnw_fc)/Exo_model$simulation$y, start=c(2020,1))*100, col = "blue", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S3_FULL_re$simulation$fnw_fc - Exo_model$simulation$fnw_fc)/Exo_model$simulation$y, start=c(2020,1))*100, col = "yellow", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S4_FULL_re$simulation$fnw_fc - Exo_model$simulation$fnw_fc)/Exo_model$simulation$y, start=c(2020,1))*100, col = "darkgreen", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S5_FULL_re$simulation$fnw_fc - Exo_model$simulation$fnw_fc)/Exo_model$simulation$y, start=c(2020,1))*100, col = "darkorange", lwd=3,lty= 1, xlab="");legend("bottomleft",legend=c(expression("Scenario 1: Tax 350DKK & "*theta* "= 0.85"),expression("Scenario 2: Tax 450DKK & "*theta* "= 0.55"),expression("Scenario 3: Tax 550DKK & "*theta* "= 0.41"),expression("Scenario 4: Tax 650DKK & "*theta* "= 0.33"),expression("Scenario 5: Tax 750DKK & "*theta* "= 0.27")),lty=c(1),lwd=c(2),bty="n", col = c("black","blue","yellow","darkgreen","darkorange"), cex=1.1); grid()
+
+
+
+
+plot(window((Exo_model_S1_FULL_re$simulation$fnw_agri - Exo_model$simulation$fnw_agri)/Exo_model$simulation$y, start=c(2020,1))*100, ylim=c(-0.8,0.7),col= "black", ylab= "Change from baseline (relative to GDP)"  , main= "Financial net wealth Agriculture", lwd=3, xlab="", cex.main=1.5);
+lines(window((Exo_model_S2_FULL_re$simulation$fnw_agri - Exo_model$simulation$fnw_agri)/Exo_model$simulation$y, start=c(2020,1))*100, col = "blue", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S3_FULL_re$simulation$fnw_agri - Exo_model$simulation$fnw_agri)/Exo_model$simulation$y, start=c(2020,1))*100, col = "yellow", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S4_FULL_re$simulation$fnw_agri - Exo_model$simulation$fnw_agri)/Exo_model$simulation$y, start=c(2020,1))*100, col = "darkgreen", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S5_FULL_re$simulation$fnw_agri - Exo_model$simulation$fnw_agri)/Exo_model$simulation$y, start=c(2020,1))*100, col = "darkorange", lwd=3,lty= 1, xlab="");legend("bottomleft",legend=c(expression("Scenario 1: Tax 350DKK & "*theta* "= 0.85"),expression("Scenario 2: Tax 450DKK & "*theta* "= 0.55"),expression("Scenario 3: Tax 550DKK & "*theta* "= 0.41"),expression("Scenario 4: Tax 650DKK & "*theta* "= 0.33"),expression("Scenario 5: Tax 750DKK & "*theta* "= 0.27")),lty=c(1),lwd=c(2),bty="n", col = c("black","blue","yellow","darkgreen","darkorange"), cex=1.1); grid()
+
+
+
+# Adding a collective title for both plots
+mtext("Financial net wealth", side = 3, outer = TRUE, line = 1, cex = 1.5)
+```
+
+
+
+
+```{r}
+
+
+plot(window((Exo_model_S1_FULL_re$simulation$pconk - Exo_model$simulation$pconk)/Exo_model$simulation$pconk, start=c(2020,1))*100, ylim=c(-3,0.7),col= "black", ylab= "Change from baseline (relative to GDP)"  , main= "Financial net wealth Agriculture", lwd=3, xlab="", cex.main=1.5);
+lines(window((Exo_model_S2_FULL_re$simulation$pconk - Exo_model$simulation$pconk)/Exo_model$simulation$pconk, start=c(2020,1))*100, col = "blue", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S3_FULL_re$simulation$pconk - Exo_model$simulation$pconk)/Exo_model$simulation$pconk, start=c(2020,1))*100, col = "yellow", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S4_FULL_re$simulation$pconk - Exo_model$simulation$pconk)/Exo_model$simulation$pconk, start=c(2020,1))*100, col = "darkgreen", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S5_FULL_re$simulation$pconk - Exo_model$simulation$pconk)/Exo_model$simulation$pconk, start=c(2020,1))*100, col = "darkorange", lwd=3,lty= 1, xlab="");legend("bottomleft",legend=c(expression("Scenario 1: Tax 350DKK & "*theta* "= 0.71"),expression("Scenario 2: Tax 450DKK & "*theta* "= 0.46"),expression("Scenario 3: Tax 550DKK & "*theta* "= 0.32"),expression("Scenario 4: Tax 650DKK & "*theta* "= 0.25"),expression("Scenario 5: Tax 750DKK & "*theta* "= 0.21")),lty=c(1),lwd=c(2),bty="n", col = c("black","blue","yellow","darkgreen","darkorange"), cex=1.1); grid()
+
+```
+
+
+
+
+
+
+# Appendix C - Sensitivity analysis
+
+
+## Baseline
+
+```{r}
+Sens_1_shock= S_modelData$Sens_1 %>% window(start= c(2000,1))
+Sens_2_shock= S_modelData$Sens_2 %>% window(start= c(2000,1))
+Sens_3_shock= S_modelData$Sens_3 %>% window(start= c(2000,1))
+Sens_4_shock= S_modelData$Sens_4 %>% window(start= c(2000,1))
+```
+
+
+
+```{r}
+# Define add-factor list (defining shock)
+constantAdjList_sens <- list(
+  
+Sens_2 = TIMESERIES(Sens_2_shock+1 ,START=c(2000,1),  FREQ=1)
+)
+
+
+```
+
+
+```{r, results='hide'}
+# Simulate the model (following shock)
+Exo_model_sens <- SIMULATE(S_model
+                    ,simType='FORECAST'
+                    ,TSRANGE=c(2019,1,2035,1)
+                    ,simConvergence=0.0001
+                    ,simIterLimit=100
+                    ,verbose = F
+                    ,ConstantAdjustment=constantAdjList_sens
+                    ,Exogenize = exogenizeList
+                    )
+```
+
+
+
+
+
+
+```{r, fig.width=20, fig.height=15}
+
+par(mfrow = c(3, 3), oma = c(0, 0, 3, 0))  # oma sets the outer margins
+
+theme_journal()
+
+plot(Exo_model_sens$simulation$Xk_dom_1, col= "red", ylab= "B. DKR" , main= "Agriculture/Forresty/Fishery", lwd=3, xlab=""  , cex.main=2); lines(S_modelData$Xk_dom_1, col = "blue", lwd=3, xlab="",cex = 1.5); 
+legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+plot(Exo_model_sens$simulation$Xk_dom_2, col= "red", ylab= "B. DKR" , main= "Meat and Fish production", lwd=3, xlab="" , cex.main=2); lines(S_modelData$Xk_dom_2, col = "blue", lwd=3, xlab="",cex = 1.5); 
+legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+plot(Exo_model_sens$simulation$Xk_dom_3, col= "red", ylab= "B. DKR" , main= "Dairy production", lwd=3, xlab="" , cex.main=2); lines(S_modelData$Xk_dom_3, col = "blue", lwd=3, xlab="",cex = 1.5); 
+legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+plot(Exo_model_sens$simulation$Xk_dom_4, col= "red", ylab= "B. DKR" , main= "Bread production", lwd=3, xlab="" , cex.main=2); lines(S_modelData$Xk_dom_4, col = "blue", lwd=3, xlab="",cex = 1.5); 
+legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+plot(Exo_model_sens$simulation$Xk_dom_5, col= "red", ylab= "B. DKR" , main= "Other food production", lwd=3, xlab="" , cex.main=2); lines(S_modelData$Xk_dom_5, col = "blue", lwd=3, xlab="",cex = 1.5); 
+legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+plot(Exo_model_sens$simulation$Xk_dom_6, col= "red", ylab= "B. DKR" , main= "Other manufacturing", lwd=3, xlab="" , cex.main=2); lines(S_modelData$Xk_dom_6, col = "blue", lwd=3, xlab=""); 
+legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+plot(Exo_model_sens$simulation$Xk_dom_7, col= "red", ylab= "B. DKR" , main= "Energy production", lwd=3, xlab="" , cex.main=2); lines(S_modelData$Xk_dom_7, col = "blue", lwd=3, xlab="",cex = 1.5); 
+legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+plot(Exo_model_sens$simulation$Xk_dom_8, col= "red", ylab= "B. DKR" , main= "Financial corporations", lwd=3, xlab="" , cex.main=2); lines(S_modelData$Xk_dom_8, col = "blue", lwd=3, xlab="",cex = 1.5); 
+legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+plot(Exo_model_sens$simulation$Xk_dom_9, col= "red", ylab= "B. DKR" , main= "Other industries", lwd=3, xlab="" , cex.main=2); lines(S_modelData$Xk_dom_9, col = "blue", lwd=3, xlab="",cex = 1.5); 
+legend("topleft",legend=c("Model (baseline)", "Data"),lty=c(1,1),lwd=c(2),bty="n", col = c("red", "blue"), cex=2); grid()
+
+# Adding a collective title for both plots
+mtext("Real sales in the nine industries", side = 3, outer = TRUE, line = 1, cex = 1.5)
+
+```
+
+
+
+## Tax 350
+
+
+
+```{r}
+
+Scenario_1_shock= S_modelData$Scenario_1 %>% window(start= c(2028,1))
+```
+
+
+
+```{r}
+# Define add-factor list (defining shock)
+constantAdjList_s1_sens <- list(
+  
+Scenario_1 = TIMESERIES(Scenario_1_shock+1 ,START=c(2028,1),  FREQ=1),
+  Sens_2 = TIMESERIES(Sens_2_shock+1 ,START=c(2000,1),  FREQ=1)
+)
+
+```
+
+
+```{r}
+#we want no change in government financial net wealth
+Targets<-list(
+fnw_g = TSERIES(c(as.numeric(Exo_model_sens$simulation$fnw_g)),START=c(2019,1),FREQ=1)
+)
+```
+
+We calculate what should the tax-rate be to obtain the target
+
+```{r}
+myModel_S1_sens<-RENORM(S_model
+                    ,INSTRUMENT = c('sben_r_h_BS')
+                    ,simType = "FORECAST"
+                    ,TARGET = Targets
+                    ,TSRANGE=c(2019,1,2035,1)
+                    ,simConvergence=0.0001
+                    ,simIterLimit=200
+                    ,verbose = F
+                    ,Exogenize = exogenizeList
+                ,ConstantAdjustment=constantAdjList_s1_sens
+)
+
+```
+
+We compare the updated tax-rate with the old one
+```{r}
+with(myModel_S1_sens,TABIT(S_modelData_F$sben_r_h_BS,
+renorm$INSTRUMENT$sben_r_h_BS))
+
+```
+
+We update the model with the new inputs
+
+```{r}
+Renorm_S1_sens<-myModel_S1_sens
+
+Renorm_S1_sens$modelData<-myModel_S1_sens$renorm$modelData
+
+```
+
+
+We run the model
+
+```{r, results='hide'}
+# Simulate the model (following shock)
+Exo_model_S1_sens <- SIMULATE(Renorm_S1_sens
+                    ,simType='FORECAST'
+                    ,TSRANGE=c(2019,1,2035,1)
+                    ,simConvergence=0.0001
+                    ,simIterLimit=200
+                    ,ConstantAdjustment=constantAdjList_s1_sens
+                    ,Exogenize = exogenizeList
+                    )
+```
+
+
+
+```{r}
+Exo_model_S1_sens$simulation$fnw_g - Exo_model_sens$simulation$fnw_g
+```
+
+
+
+
+## Tax 450 
+
+
+
+```{r}
+
+Scenario_2_shock= S_modelData$Scenario_2 %>% window(start= c(2028,1))
+```
+
+
+
+```{r}
+# Define add-factor list (defining shock)
+constantAdjList_s2_sens <- list(
+  
+Scenario_2 = TIMESERIES(Scenario_2_shock+1 ,START=c(2028,1),  FREQ=1),
+  Sens_2 = TIMESERIES(Sens_2_shock+1 ,START=c(2000,1),  FREQ=1)
+)
+
+```
+
+
+```{r}
+myModel_S2_sens<-RENORM(S_model
+                    ,INSTRUMENT = c('sben_r_h_BS')
+                    ,simType = "FORECAST"
+                    ,TARGET = Targets
+                    ,TSRANGE=c(2019,1,2035,1)
+                    ,simConvergence=0.0001
+                    ,simIterLimit=200
+                    ,verbose = F
+                    ,Exogenize = exogenizeList
+                ,ConstantAdjustment=constantAdjList_s2_sens
+)
+
+```
+
+We compare the updated tax-rate with the old one
+```{r}
+with(myModel_S2_sens,TABIT(S_modelData_F$sben_r_h_BS,
+renorm$INSTRUMENT$sben_r_h_BS))
+
+```
+
+We update the model with the new inputs
+
+```{r}
+Renorm_S2_sens<-myModel_S2_sens
+
+Renorm_S2_sens$modelData<-myModel_S2_sens$renorm$modelData
+
+```
+
+
+
+```{r, results='hide'}
+# Simulate the model (following shock)
+Exo_model_S2_sens <- SIMULATE(Renorm_S2_sens
+                    ,simType='FORECAST'
+                    ,TSRANGE=c(2019,1,2035,1)
+                    ,simConvergence=0.0001
+                    ,simIterLimit=200
+                    ,ConstantAdjustment=constantAdjList_s2_sens
+                    ,Exogenize = exogenizeList
+                    )
+```
+
+
+
+
+## Tax 550 
+
+
+
+```{r}
+
+Scenario_3_shock= S_modelData$Scenario_3 %>% window(start= c(2028,1))
+```
+
+
+
+```{r}
+# Define add-factor list (defining shock)
+constantAdjList_s3_sens <- list(
+  
+Scenario_3 = TIMESERIES(Scenario_3_shock+1 ,START=c(2028,1),  FREQ=1),
+  Sens_2 = TIMESERIES(Sens_2_shock+1 ,START=c(2000,1),  FREQ=1)
+)
+
+```
+
+
+
+```{r}
+myModel_S3_sens<-RENORM(S_model
+                    ,INSTRUMENT = c('sben_r_h_BS')
+                    ,simType = "FORECAST"
+                    ,TARGET = Targets
+                    ,TSRANGE=c(2019,1,2035,1)
+                    ,simConvergence=0.0001
+                    ,simIterLimit=200
+                    ,verbose = F
+                    ,Exogenize = exogenizeList
+                ,ConstantAdjustment=constantAdjList_s3_sens
+)
+
+```
+
+We compare the updated tax-rate with the old one
+```{r}
+with(myModel_S3_sens,TABIT(S_modelData_F$sben_r_h_BS,
+renorm$INSTRUMENT$sben_r_h_BS))
+
+```
+
+We update the model with the new inputs
+
+```{r}
+Renorm_S3_sens<-myModel_S3_sens
+
+Renorm_S3_sens$modelData<-myModel_S3_sens$renorm$modelData
+
+```
+
+
+
+```{r, results='hide'}
+# Simulate the model (following shock)
+Exo_model_S3_sens <- SIMULATE(Renorm_S3_sens
+                    ,simType='FORECAST'
+                    ,TSRANGE=c(2019,1,2035,1)
+                    ,simConvergence=0.0001
+                    ,simIterLimit=200
+                    ,ConstantAdjustment=constantAdjList_s3_sens
+                    ,Exogenize = exogenizeList
+                    )
+```
+
+
+
+## Tax 650 
+
+
+
+```{r}
+
+Scenario_4_shock= S_modelData$Scenario_4 %>% window(start= c(2028,1))
+```
+
+
+
+```{r}
+# Define add-factor list (defining shock)
+constantAdjList_s4_sens <- list(
+  
+Scenario_4 = TIMESERIES(Scenario_4_shock+1 ,START=c(2028,1),  FREQ=1),
+  Sens_2 = TIMESERIES(Sens_2_shock+1 ,START=c(2000,1),  FREQ=1)
+)
+
+```
+
+
+
+```{r}
+myModel_S4_sens<-RENORM(S_model
+                    ,INSTRUMENT = c('sben_r_h_BS')
+                    ,simType = "FORECAST"
+                    ,TARGET = Targets
+                    ,TSRANGE=c(2019,1,2035,1)
+                    ,simConvergence=0.0001
+                    ,simIterLimit=200
+                    ,verbose = F
+                    ,Exogenize = exogenizeList
+                ,ConstantAdjustment=constantAdjList_s4_sens
+)
+
+```
+
+We compare the updated tax-rate with the old one
+```{r}
+with(myModel_S4_sens,TABIT(S_modelData_F$sben_r_h_BS,
+renorm$INSTRUMENT$sben_r_h_BS))
+
+```
+
+We update the model with the new inputs
+
+```{r}
+Renorm_S4_sens<-myModel_S4_sens
+
+Renorm_S4_sens$modelData<-myModel_S4_sens$renorm$modelData
+
+```
+
+
+```{r, results='hide'}
+# Simulate the model (following shock)
+Exo_model_S4_sens <- SIMULATE(Renorm_S4_sens
+                    ,simType='FORECAST'
+                    ,TSRANGE=c(2019,1,2035,1)
+                    ,simConvergence=0.0001
+                    ,simIterLimit=200
+                    ,ConstantAdjustment=constantAdjList_s4_sens
+                    ,Exogenize = exogenizeList
+                    )
+```
+
+
+## Tax 750 
+
+
+
+```{r}
+
+Scenario_5_shock= S_modelData$Scenario_5 %>% window(start= c(2028,1))
+```
+
+
+
+```{r}
+# Define add-factor list (defining shock)
+constantAdjList_s5_sens <- list(
+  
+Scenario_5 = TIMESERIES(Scenario_5_shock+1 ,START=c(2028,1),  FREQ=1),
+  Sens_2 = TIMESERIES(Sens_2_shock+1 ,START=c(2000,1),  FREQ=1)
+)
+
+```
+
+
+
+```{r}
+myModel_S5_sens<-RENORM(S_model
+                    ,INSTRUMENT = c('sben_r_h_BS')
+                    ,simType = "FORECAST"
+                    ,TARGET = Targets
+                    ,TSRANGE=c(2019,1,2035,1)
+                    ,simConvergence=0.0001
+                    ,simIterLimit=200
+                    ,verbose = F
+                    ,Exogenize = exogenizeList
+                ,ConstantAdjustment=constantAdjList_s5_sens
+)
+
+```
+
+We compare the updated tax-rate with the old one
+```{r}
+with(myModel_S5_sens,TABIT(S_modelData_F$sben_r_h_BS,
+renorm$INSTRUMENT$sben_r_h_BS))
+
+```
+
+We update the model with the new inputs
+
+```{r}
+Renorm_S5_sens<-myModel_S5_sens
+
+Renorm_S5_sens$modelData<-myModel_S5_sens$renorm$modelData
+
+```
+
+
+```{r, results='hide'}
+# Simulate the model (following shock)
+Exo_model_S5_sens <- SIMULATE(Renorm_S5_sens
+                    ,simType='FORECAST'
+                    ,TSRANGE=c(2019,1,2035,1)
+                    ,simConvergence=0.0001
+                    ,simIterLimit=200
+                    ,ConstantAdjustment=constantAdjList_s5_sens
+                    ,Exogenize = exogenizeList
+                    )
+```
+
+
+## Sen´sitivity plots
+
+
+
+
+```{r, fig.width=20, fig.height=12}
+
+
+par(mfrow = c(2, 3), oma = c(0, 0, 3, 0))  # oma sets the outer margins
+
+theme_journal()
+
+
+
+
+plot(window((Exo_model_S1_sens$simulation$fnw_g - Exo_model_sens$simulation$fnw_g)/Exo_model_sens$simulation$y, start=c(2020,1))*100, ylim=c(-0.7,0.7),col= "black", ylab= "Change from baseline (relative to GDP)" , main= "Government", lwd=3, xlab="", cex.main=1.5);
+lines(window((Exo_model_S2_sens$simulation$fnw_g - Exo_model_sens$simulation$fnw_g)/Exo_model_sens$simulation$y, start=c(2020,1))*100, col = "blue", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S3_sens$simulation$fnw_g - Exo_model_sens$simulation$fnw_g)/Exo_model_sens$simulation$y, start=c(2020,1))*100, col = "yellow", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S4_sens$simulation$fnw_g - Exo_model_sens$simulation$fnw_g)/Exo_model_sens$simulation$y, start=c(2020,1))*100, col = "darkgreen", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S5_sens$simulation$fnw_g - Exo_model_sens$simulation$fnw_g)/Exo_model_sens$simulation$y, start=c(2020,1))*100, col = "darkorange", lwd=3,lty= 1, xlab="");legend("bottomleft",legend=c(expression("Scenario 1: Tax 350DKK & "*theta* "= 0.85"),expression("Scenario 2: Tax 450DKK & "*theta* "= 0.55"),expression("Scenario 3: Tax 550DKK & "*theta* "= 0.41"),expression("Scenario 4: Tax 650DKK & "*theta* "= 0.33"),expression("Scenario 5: Tax 750DKK & "*theta* "= 0.27")),lty=c(1),lwd=c(2),bty="n", col = c("black","blue","yellow","darkgreen","darkorange"), cex=1.1); grid()
+
+
+plot(window((Exo_model_S1_sens$simulation$fnw_h - Exo_model_sens$simulation$fnw_h)/Exo_model_sens$simulation$y, start=c(2020,1))*100, ylim=c(-0.7,0.7),col= "black", ylab= "Change from baseline (relative to GDP)"  , main= "Households", lwd=3, xlab="", cex.main=1.5);
+lines(window((Exo_model_S2_sens$simulation$fnw_h - Exo_model_sens$simulation$fnw_h)/Exo_model_sens$simulation$y, start=c(2020,1))*100, col = "blue", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S3_sens$simulation$fnw_h - Exo_model_sens$simulation$fnw_h)/Exo_model_sens$simulation$y, start=c(2020,1))*100, col = "yellow", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S4_sens$simulation$fnw_h - Exo_model_sens$simulation$fnw_h)/Exo_model_sens$simulation$y, start=c(2020,1))*100, col = "darkgreen", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S5_sens$simulation$fnw_h - Exo_model_sens$simulation$fnw_h)/Exo_model_sens$simulation$y, start=c(2020,1))*100, col = "darkorange", lwd=3,lty= 1, xlab="");legend("bottomleft",legend=c(expression("Scenario 1: Tax 350DKK & "*theta* "= 0.85"),expression("Scenario 2: Tax 450DKK & "*theta* "= 0.55"),expression("Scenario 3: Tax 550DKK & "*theta* "= 0.41"),expression("Scenario 4: Tax 650DKK & "*theta* "= 0.33"),expression("Scenario 5: Tax 750DKK & "*theta* "= 0.27")),lty=c(1),lwd=c(2),bty="n", col = c("black","blue","yellow","darkgreen","darkorange"), cex=1.1); grid()
+
+
+
+plot(window((Exo_model_S1_sens$simulation$fnw_nfc - Exo_model_sens$simulation$fnw_nfc)/Exo_model_sens$simulation$y, start=c(2020,1))*100, ylim=c(-0.9,0.7),col= "black", ylab= "Change from baseline (relative to GDP)"  , main= "Non-financial corporations", lwd=3, xlab="", cex.main=1.5);
+lines(window((Exo_model_S2_sens$simulation$fnw_nfc - Exo_model_sens$simulation$fnw_nfc)/Exo_model_sens$simulation$y, start=c(2020,1))*100, col = "blue", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S3_sens$simulation$fnw_nfc - Exo_model_sens$simulation$fnw_nfc)/Exo_model_sens$simulation$y, start=c(2020,1))*100, col = "yellow", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S4_sens$simulation$fnw_nfc - Exo_model_sens$simulation$fnw_nfc)/Exo_model_sens$simulation$y, start=c(2020,1))*100, col = "darkgreen", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S5_sens$simulation$fnw_nfc - Exo_model_sens$simulation$fnw_nfc)/Exo_model_sens$simulation$y, start=c(2020,1))*100, col = "darkorange", lwd=3,lty= 1, xlab="");legend("bottomleft",legend=c(expression("Scenario 1: Tax 350DKK & "*theta* "= 0.85"),expression("Scenario 2: Tax 450DKK & "*theta* "= 0.55"),expression("Scenario 3: Tax 550DKK & "*theta* "= 0.41"),expression("Scenario 4: Tax 650DKK & "*theta* "= 0.33"),expression("Scenario 5: Tax 750DKK & "*theta* "= 0.27")),lty=c(1),lwd=c(2),bty="n", col = c("black","blue","yellow","darkgreen","darkorange"), cex=1.1); grid()
+
+
+
+plot(window((Exo_model_S1_sens$simulation$fnw_row - Exo_model_sens$simulation$fnw_row)/Exo_model_sens$simulation$y, start=c(2020,1))*100, ylim=c(-0.7,0.9),col= "black", ylab= "Change from baseline (relative to GDP)"  , main= "Rest of the world", lwd=3, xlab="", cex.main=1.5);
+lines(window((Exo_model_S2_sens$simulation$fnw_row - Exo_model_sens$simulation$fnw_row)/Exo_model_sens$simulation$y, start=c(2020,1))*100, col = "blue", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S3_sens$simulation$fnw_row - Exo_model_sens$simulation$fnw_row)/Exo_model_sens$simulation$y, start=c(2020,1))*100, col = "yellow", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S4_sens$simulation$fnw_row - Exo_model_sens$simulation$fnw_row)/Exo_model_sens$simulation$y, start=c(2020,1))*100, col = "darkgreen", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S5_sens$simulation$fnw_row - Exo_model_sens$simulation$fnw_row)/Exo_model_sens$simulation$y, start=c(2020,1))*100, col = "darkorange", lwd=3,lty= 1, xlab="");legend("bottomleft",legend=c(expression("Scenario 1: Tax 350DKK & "*theta* "= 0.85"),expression("Scenario 2: Tax 450DKK & "*theta* "= 0.55"),expression("Scenario 3: Tax 550DKK & "*theta* "= 0.41"),expression("Scenario 4: Tax 650DKK & "*theta* "= 0.33"),expression("Scenario 5: Tax 750DKK & "*theta* "= 0.27")),lty=c(1),lwd=c(2),bty="n", col = c("black","blue","yellow","darkgreen","darkorange"), cex=1.1); grid()
+
+
+
+plot(window((Exo_model_S1_sens$simulation$fnw_fc - Exo_model_sens$simulation$fnw_fc)/Exo_model_sens$simulation$y, start=c(2020,1))*100, ylim=c(-0.7,0.7),col= "black", ylab= "Change from baseline (relative to GDP)"  , main= "Financial corporations", lwd=3, xlab="", cex.main=1.5);
+lines(window((Exo_model_S2_sens$simulation$fnw_fc - Exo_model_sens$simulation$fnw_fc)/Exo_model_sens$simulation$y, start=c(2020,1))*100, col = "blue", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S3_sens$simulation$fnw_fc - Exo_model_sens$simulation$fnw_fc)/Exo_model_sens$simulation$y, start=c(2020,1))*100, col = "yellow", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S4_sens$simulation$fnw_fc - Exo_model_sens$simulation$fnw_fc)/Exo_model_sens$simulation$y, start=c(2020,1))*100, col = "darkgreen", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S5_sens$simulation$fnw_fc - Exo_model_sens$simulation$fnw_fc)/Exo_model_sens$simulation$y, start=c(2020,1))*100, col = "darkorange", lwd=3,lty= 1, xlab="");legend("bottomleft",legend=c(expression("Scenario 1: Tax 350DKK & "*theta* "= 0.85"),expression("Scenario 2: Tax 450DKK & "*theta* "= 0.55"),expression("Scenario 3: Tax 550DKK & "*theta* "= 0.41"),expression("Scenario 4: Tax 650DKK & "*theta* "= 0.33"),expression("Scenario 5: Tax 750DKK & "*theta* "= 0.27")),lty=c(1),lwd=c(2),bty="n", col = c("black","blue","yellow","darkgreen","darkorange"), cex=1.1); grid()
+
+
+
+
+plot(window((Exo_model_S1_sens$simulation$fnw_agri - Exo_model_sens$simulation$fnw_agri)/Exo_model_sens$simulation$y, start=c(2020,1))*100, ylim=c(-1,0.7),col= "black", ylab= "Change from baseline (relative to GDP)"  , main= "Financial net wealth Agriculture", lwd=3, xlab="", cex.main=1.5);
+lines(window((Exo_model_S2_sens$simulation$fnw_agri - Exo_model_sens$simulation$fnw_agri)/Exo_model_sens$simulation$y, start=c(2020,1))*100, col = "blue", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S3_sens$simulation$fnw_agri - Exo_model_sens$simulation$fnw_agri)/Exo_model_sens$simulation$y, start=c(2020,1))*100, col = "yellow", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S4_sens$simulation$fnw_agri - Exo_model_sens$simulation$fnw_agri)/Exo_model_sens$simulation$y, start=c(2020,1))*100, col = "darkgreen", lwd=3,lty= 1, xlab="");
+lines(window((Exo_model_S5_sens$simulation$fnw_agri - Exo_model_sens$simulation$fnw_agri)/Exo_model_sens$simulation$y, start=c(2020,1))*100, col = "darkorange", lwd=3,lty= 1, xlab="");legend("bottomleft",legend=c(expression("Scenario 1: Tax 350DKK & "*theta* "= 0.85"),expression("Scenario 2: Tax 450DKK & "*theta* "= 0.55"),expression("Scenario 3: Tax 550DKK & "*theta* "= 0.41"),expression("Scenario 4: Tax 650DKK & "*theta* "= 0.33"),expression("Scenario 5: Tax 750DKK & "*theta* "= 0.27")),lty=c(1),lwd=c(2),bty="n", col = c("black","blue","yellow","darkgreen","darkorange"), cex=1.1); grid()
+
+
+
+# Adding a collective title for both plots
+mtext("Financial net wealth", side = 3, outer = TRUE, line = 1, cex = 1.5)
+```
+
+
+```{r, fig.width=15, fig.height=7}
+
+
+par(mfrow = c(1, 2), oma = c(0, 0, 3, 0))  # oma sets the outer margins
+
+theme_journal()
+
+
+plot(Exo_model_sens$simulation$Debt_ratio,col= "red", ylab= "Change in units" , main= "Debt to capital ratio", lwd=3, xlab="", cex.main=1.5);
+lines(Exo_model_S1_sens$simulation$Debt_ratio, col = "black", lwd=3,lty= 1, xlab="");
+lines(Exo_model_S2_sens$simulation$Debt_ratio, col = "blue", lwd=3,lty= 1, xlab="");
+lines(Exo_model_S3_sens$simulation$Debt_ratio, col = "yellow", lwd=3,lty= 1, xlab="");
+lines(Exo_model_S4_sens$simulation$Debt_ratio, col = "darkgreen", lwd=3,lty= 1, xlab="");
+lines(Exo_model_S5_sens$simulation$Debt_ratio, col = "darkorange", lwd=3,lty= 1, xlab="");legend("bottomleft",legend=c(expression("Baseline"),expression("Scenario 1: Tax 350DKK & "*theta* "= 0.85"),expression("Scenario 2: Tax 450DKK & "*theta* "= 0.55"),expression("Scenario 3: Tax 550DKK & "*theta* "= 0.41"),expression("Scenario 4: Tax 650DKK & "*theta* "= 0.33"),expression("Scenario 5: Tax 750DKK & "*theta* "= 0.27")),lty=c(1),lwd=c(2),bty="n", col = c("red","black","blue","yellow","darkgreen","darkorange"), cex=1.1); grid()
+
+
+
+plot(Exo_model_sens$simulation$Likvid_ratio,col= "red", ylab= "Change in units" , main= "Liquitity ratio", lwd=3, xlab="", cex.main=1.5, ylim= c());
+lines(Exo_model_S1_sens$simulation$Likvid_ratio, col = "black", lwd=3,lty= 1, xlab="");
+lines(Exo_model_S2_sens$simulation$Likvid_ratio, col = "blue", lwd=3,lty= 1, xlab="");
+lines(Exo_model_S3_sens$simulation$Likvid_ratio, col = "yellow", lwd=3,lty= 1, xlab="");
+lines(Exo_model_S4_sens$simulation$Likvid_ratio, col = "darkgreen", lwd=3,lty= 1, xlab="");
+lines(Exo_model_S5_sens$simulation$Likvid_ratio, col = "darkorange", lwd=3,lty= 1, xlab="");legend("bottomleft",legend=c(expression("Baseline"),expression("Scenario 1: Tax 350DKK & "*theta* "= 0.85"),expression("Scenario 2: Tax 450DKK & "*theta* "= 0.55"),expression("Scenario 3: Tax 550DKK & "*theta* "= 0.41"),expression("Scenario 4: Tax 650DKK & "*theta* "= 0.33"),expression("Scenario 5: Tax 750DKK & "*theta* "= 0.27")),lty=c(1),lwd=c(2),bty="n", col = c("red","black","blue","yellow","darkgreen","darkorange"), cex=1.1); grid()
+
+
+
+# Adding a collective title for both plots
+mtext("Financial stability agriculture", side = 3, outer = TRUE, line = 1, cex = 1.5)
+```
